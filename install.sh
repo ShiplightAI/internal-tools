@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO="ShiplightAI/internal-agent-skills"
+SKILLS_SOURCE="git@github.com:${REPO}.git"
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/main"
 SMOKE_AGENT_PATH="files/.agents/smoke-test-agent.md"
 
@@ -20,7 +21,7 @@ Examples:
   ./install.sh --skill auto-pr --skill speckit-verify -a codex -y
 
 All arguments are passed through to:
-  npx -y skills add ShiplightAI/internal-agent-skills
+  npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git
 
 The installer also writes:
   .agents/smoke-test-agent.md
@@ -41,7 +42,7 @@ if ! command -v npx >/dev/null 2>&1; then
   exit 1
 fi
 
-npx -y skills add "$REPO" "$@"
+npx -y skills add "$SKILLS_SOURCE" "$@"
 
 mkdir -p .agents
 

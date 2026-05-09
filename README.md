@@ -37,12 +37,15 @@ gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-
 The installer delegates all arguments to:
 
 ```bash
-npx -y skills add ShiplightAI/internal-agent-skills "$@"
+npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git "$@"
 ```
 
 That means normal `skills` flags such as `-a`, `--all`, `-g`, `--copy`, and
 `--skill` continue to work without this repository maintaining an agent
 compatibility list.
+
+The repository is private, so developers need `gh` authenticated for the
+one-line installer and GitHub SSH access for the `skills` clone step.
 
 ## Install Individual Skills
 
