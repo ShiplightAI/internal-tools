@@ -42,7 +42,7 @@ if ! command -v npx >/dev/null 2>&1; then
   exit 1
 fi
 
-npx -y skills add "$SKILLS_SOURCE" "$@"
+npx -y skills add "$SKILLS_SOURCE" "$@" < /dev/null
 
 mkdir -p .agents
 
