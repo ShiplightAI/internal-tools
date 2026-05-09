@@ -18,20 +18,20 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 From a target project repo:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ShiplightAI/internal-agent-skills/main/install.sh | bash -s -- -a codex -y
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- -a codex -y
 ```
 
 Install for another `skills`-supported agent by changing the `-a` value:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ShiplightAI/internal-agent-skills/main/install.sh | bash -s -- -a claude-code -y
-curl -fsSL https://raw.githubusercontent.com/ShiplightAI/internal-agent-skills/main/install.sh | bash -s -- -a gemini -y
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- -a claude-code -y
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- -a gemini -y
 ```
 
 Install for all supported agents detected by `skills`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ShiplightAI/internal-agent-skills/main/install.sh | bash -s -- --all
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --all
 ```
 
 The installer delegates all arguments to:
@@ -47,7 +47,7 @@ compatibility list.
 ## Install Individual Skills
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ShiplightAI/internal-agent-skills/main/install.sh | bash -s -- --skill auto-pr -a codex -y
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill auto-pr -a codex -y
 ```
 
 Note: `.agents/smoke-test-agent.md` is installed whenever `install.sh` runs,

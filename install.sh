@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO="ShiplightAI/internal-agent-skills"
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/main"
+SMOKE_AGENT_PATH="files/.agents/smoke-test-agent.md"
 
 usage() {
   cat <<'EOF'
@@ -43,12 +44,24 @@ fi
 npx -y skills add "$REPO" "$@"
 
 mkdir -p .agents
-if command -v curl >/dev/null 2>&1; then
-  curl -fsSL "${RAW_BASE}/files/.agents/smoke-test-agent.md" -o .agents/smoke-test-agent.md
+
+if command -v gh >/dev/null 2>&1; then
+  gh api \
+    -H "Accept: application/vnd.github.raw" \
+    "repos/${REPO}/contents/${SMOKE_AGENT_PATH}" \
+    > .agents/smoke-test-agent.md
+elif command -v curl >/dev/null 2>&1 && [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  curl -fsSL \
+    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github.raw" \
+    "${RAW_BASE}/${SMOKE_AGENT_PATH}" \
+    -o .agents/smoke-test-agent.md
+elif command -v curl >/dev/null 2>&1; then
+  curl -fsSL "${RAW_BASE}/${SMOKE_AGENT_PATH}" -o .agents/smoke-test-agent.md
 elif command -v wget >/dev/null 2>&1; then
-  wget -qO .agents/smoke-test-agent.md "${RAW_BASE}/files/.agents/smoke-test-agent.md"
+  wget -qO .agents/smoke-test-agent.md "${RAW_BASE}/${SMOKE_AGENT_PATH}"
 else
-  echo "error: curl or wget is required to install .agents/smoke-test-agent.md" >&2
+  echo "error: gh, curl, or wget is required to install .agents/smoke-test-agent.md" >&2
   exit 1
 fi
 
