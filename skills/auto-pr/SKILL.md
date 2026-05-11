@@ -1,35 +1,45 @@
 ---
 name: auto-pr
-description: Create a PR against staging, run a local pre-review, then wait for the Claude bot review, fix critical issues, and merge
+description: Create a PR against the repo's base branch, run a local pre-review, then wait for the Claude bot review, fix critical issues, and merge
 user_invocable: true
 ---
 
 # Auto PR
 
-Create a PR against staging, run a fast local pre-review, then wait for the GitHub `claude[bot]` review (still required), fix critical issues from both, and merge.
+Create a PR against the appropriate base branch, run a fast local pre-review, then wait for the GitHub `claude[bot]` review (still required), fix critical issues from both, and merge.
 
 The local `/code-review:code-review` skill is a **pre-pass**, not a replacement for the bot. It returns findings in-conversation in seconds, so we can fix obvious issues before the GHA-based bot review picks up the diff — saving expensive GHA round-trips. The bot review is still authoritative and must be addressed.
+
+## Resolving the base branch
+
+Before doing anything else, decide what branch the PR will target. Use the **first** that resolves:
+
+1. **Explicit argument** — if the skill was invoked with a branch name (e.g. `/auto-pr staging`), use it.
+2. **Repo CLAUDE.md** — if the repo's `CLAUDE.md` (or `.claude/CLAUDE.md`) names a base branch for PRs (look for phrases like "PRs target X", "base branch is X", "cut PRs against X"), use that.
+3. **Repo default branch** — fall back to `gh api repos/{owner}/{repo} --jq .default_branch`.
+
+Store this as `<BASE>` and use it for the rest of the run. Mention which source you used in your first status message so the user can correct you if wrong.
 
 ## Instructions
 
 1. **Check for uncommitted changes**: Run `git status`. If there are uncommitted changes, **ask the user** to review and commit them first. Do NOT auto-commit — the user should decide what to stage.
 
-2. **Rebase on latest staging**:
-   - `git fetch origin staging`
-   - `git rebase origin/staging`
+2. **Rebase on latest base**:
+   - `git fetch origin <BASE>`
+   - `git rebase origin/<BASE>`
    - If there are conflicts, **stop and tell the user** — do not attempt to resolve conflicts automatically
 
 3. **Push to remote**: `git push -u origin <branch-name>` (use `--force-with-lease` if the rebase rewrote history)
 
-4. **Create or update PR against staging**:
+4. **Create or update PR against `<BASE>`**:
    - Check if a PR already exists: `gh pr list --head <branch-name> --json number`
    - If exists, update with `gh pr edit`
-   - If not, create with `gh pr create --base staging`
-   - Generate PR title and body from `git log origin/staging..HEAD --oneline` and `git diff origin/staging...HEAD --stat`
+   - If not, create with `gh pr create --base <BASE>`
+   - Generate PR title and body from `git log origin/<BASE>..HEAD --oneline` and `git diff origin/<BASE>...HEAD --stat`
    - Use this format:
 
    ```
-   gh pr create --base staging --title "<type>: <description>" --body "$(cat <<'EOF'
+   gh pr create --base <BASE> --title "<type>: <description>" --body "$(cat <<'EOF'
    ## Summary
    <bullet points from commit history>
 
@@ -52,12 +62,13 @@ The local `/code-review:code-review` skill is a **pre-pass**, not a replacement 
 
 6. **Push any pre-review fixes** to the PR branch (if step 5 made changes). The PR auto-updates; the bot picks up the latest HEAD.
 
-7. **Wait for Claude bot review** (always required — not skippable):
+7. **Wait for Claude bot review** (required if the bot is installed in this repo):
    - The Claude bot posts as an **issue comment** (not a PR review)
-   - Poll with: `gh api repos/ShiplightAI/shipyard/issues/<PR_NUMBER>/comments --jq '[.[] | select(.user.login == "claude[bot]")] | last | .body'`
+   - Poll with: `gh api repos/{owner}/{repo}/issues/<PR_NUMBER>/comments --jq '[.[] | select(.user.login == "claude[bot]")] | last | .body'`
    - Wait 60 seconds between checks, up to 10 minutes
    - A review is ready when the **latest** claude[bot] comment is NOT the text `[This comment was superseded by a more complete review posted below.]` — superseded comments are placeholders for in-progress re-reviews
-   - If the 10-minute timeout expires without a review, **stop and tell the user** — do not proceed to merge
+   - If the 10-minute timeout expires without **any** claude[bot] comment, the bot is likely not installed in this repo. **Ask the user** whether to skip the bot wait and proceed to merge, or to stop.
+   - If at least one claude[bot] comment exists but the latest is still a superseded placeholder after 10 minutes, **stop and tell the user** — the review is in-flight but slow.
    - If pre-review fixes (step 5) were pushed, make sure you're reading a bot comment that landed **after** the latest push — older comments may reflect a stale diff
 
 8. **Read and act on the bot review** (max 3 iterations):
@@ -77,9 +88,10 @@ The local `/code-review:code-review` skill is a **pre-pass**, not a replacement 
 
 ## Important
 
-- Always create PRs against the `staging` branch
+- The base branch is resolved once at the start (see "Resolving the base branch") — use the resolved `<BASE>` consistently for `git fetch`, `git rebase`, `gh pr create --base`, and the diff/log commands. Never assume `main` or `staging`.
+- Use `repos/{owner}/{repo}` placeholders in `gh api` calls — `gh` substitutes the current repo, so the skill works in any repo without hardcoding the owner/name.
 - Do not add Co-Authored-By or generation metadata to commits
-- The local `/code-review:code-review` skill is a pre-pass to reduce GHA round-trips — it does NOT replace the bot review; the bot review in step 7 is always required before merge
+- The local `/code-review:code-review` skill is a pre-pass to reduce GHA round-trips — it does NOT replace the bot review; the bot review in step 7 is required before merge **when the bot is installed**. If the bot never posts, ask the user before merging without it.
 - When invoking the local skill, do NOT pass `--comment`; act on findings in-conversation rather than duplicating comments on the PR (the bot does that)
 - The Claude bot posts as issue comments, NOT PR reviews — use `/issues/` API not `/pulls/.../reviews`
 - Keep commit messages clean and professional

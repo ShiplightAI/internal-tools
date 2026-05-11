@@ -9,7 +9,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 
 | Asset | Purpose |
 | --- | --- |
-| `auto-pr` | Create a PR against `staging`, run pre-review, wait for Claude bot review, address blockers, and merge. |
+| `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `speckit-verify` | Audit implemented Spec Kit features and write `specs/<feature>/verification.md`. |
 | `.agents/smoke-test-agent.md` | Generic smoke-test subagent prompt copied into each project repo. |
 
