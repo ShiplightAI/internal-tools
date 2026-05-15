@@ -1,0 +1,672 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VERSION="0.1.0"
+STATE_DIR="${SHELL_AGENT_STATE_DIR:-$HOME/.shell-agent}"
+BACKEND="${SHELL_AGENT_BACKEND:-auto}"
+DEFAULT_CODEX_MODEL="${SHELL_AGENT_DEFAULT_CODEX_MODEL:-gpt-5.4-nano}"
+DEFAULT_CLAUDE_MODEL="${SHELL_AGENT_DEFAULT_CLAUDE_MODEL:-haiku}"
+DEFAULT_GEMINI_MODEL="${SHELL_AGENT_DEFAULT_GEMINI_MODEL:-gemini-3.1-flash-lite}"
+MODEL="${SHELL_AGENT_MODEL:-}"
+AUTO_RUN="${SHELL_AGENT_AUTO_RUN:-readonly}"
+GEMINI_AGENT_APPROVAL_MODE="${SHELL_AGENT_GEMINI_APPROVAL_MODE:-yolo}"
+GEMINI_AGENT_SANDBOX="${SHELL_AGENT_GEMINI_SANDBOX:-1}"
+
+usage() {
+  cat <<'EOF'
+shell-agent: launch a provider-native coding agent from bash/zsh.
+
+Usage:
+  shell-agent agent [--history FILE] TEXT...
+  shell-agent suggest [--history FILE] TEXT...  # legacy command proposal mode
+  shell-agent record --command COMMAND --exit CODE [--cwd DIR]
+  shell-agent init
+  shell-agent --help
+
+Environment:
+  SHELL_AGENT_BACKEND=auto|codex|claude|gemini
+  SHELL_AGENT_MODEL=MODEL
+  SHELL_AGENT_AUTO_RUN=0|readonly|1  (suggest mode only; default: readonly)
+  SHELL_AGENT_STATE_DIR=~/.shell-agent
+
+Source the shell integration:
+  source "$HOME/.shell-agent/shell-agent.sh"
+EOF
+}
+
+die() {
+  printf 'shell-agent: %s\n' "$*" >&2
+  exit 1
+}
+
+json_escape() {
+  if command -v jq >/dev/null 2>&1; then
+    jq -Rs .
+  else
+    python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
+  fi
+}
+
+ensure_state() {
+  mkdir -p "$STATE_DIR"
+  touch "$STATE_DIR/transcript.jsonl"
+}
+
+append_event() {
+  ensure_state
+  printf '%s\n' "$1" >> "$STATE_DIR/transcript.jsonl"
+}
+
+recent_transcript() {
+  ensure_state
+  tail -40 "$STATE_DIR/transcript.jsonl" 2>/dev/null || true
+}
+
+git_context() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    printf 'git_branch: %s\n' "$(git branch --show-current 2>/dev/null || true)"
+    printf 'git_status_short:\n'
+    git status --short 2>/dev/null | sed 's/^/  /'
+  else
+    printf 'git: not inside a git repository\n'
+  fi
+}
+
+history_context() {
+  local history_file="$1"
+  if [[ -n "$history_file" && -r "$history_file" ]]; then
+    tail -40 "$history_file"
+  elif [[ -n "${SHELL_AGENT_HISTORY:-}" ]]; then
+    printf '%s\n' "$SHELL_AGENT_HISTORY" | tail -40
+  fi
+}
+
+platform_context() {
+  local os_name
+  os_name="$(uname -s 2>/dev/null || printf 'unknown')"
+  printf 'os: %s\n' "$os_name"
+  case "$os_name" in
+    Darwin)
+      cat <<'EOF'
+compatibility:
+  - This is macOS/Darwin with BSD userland tools.
+  - Do not use GNU-only find options such as -printf.
+  - Prefer macOS-compatible commands such as find with -exec stat -f, or stat -f directly.
+EOF
+      ;;
+    Linux)
+      printf 'compatibility: Linux userland; GNU coreutils/findutils are usually available.\n'
+      ;;
+  esac
+}
+
+supports_color() {
+  [[ -t 2 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]
+}
+
+colorize() {
+  local code="$1"
+  shift
+  if supports_color; then
+    printf '\033[%sm%s\033[0m' "$code" "$*"
+  else
+    printf '%s' "$*"
+  fi
+}
+
+now_ms() {
+  perl -MTime::HiRes=time -e 'printf "%.0f\n", time() * 1000' 2>/dev/null || printf '%s000\n' "$(date +%s)"
+}
+
+elapsed_ms() {
+  local start_ms="$1"
+  local end_ms="$2"
+  printf '%s\n' "$((end_ms - start_ms))"
+}
+
+detect_backend() {
+  case "$BACKEND" in
+    auto)
+      if command -v gemini >/dev/null 2>&1; then
+        printf 'gemini\n'
+      elif command -v codex >/dev/null 2>&1; then
+        printf 'codex\n'
+      elif command -v claude >/dev/null 2>&1; then
+        printf 'claude\n'
+      else
+        printf 'none\n'
+      fi
+      ;;
+    codex|claude|gemini) printf '%s\n' "$BACKEND" ;;
+    *) die "unknown backend: $BACKEND" ;;
+  esac
+}
+
+effective_model() {
+  local backend="$1"
+  case "$backend" in
+    claude) printf '%s\n' "${MODEL:-$DEFAULT_CLAUDE_MODEL}" ;;
+    codex) printf '%s\n' "${MODEL:-$DEFAULT_CODEX_MODEL}" ;;
+    gemini) printf '%s\n' "${MODEL:-$DEFAULT_GEMINI_MODEL}" ;;
+    *) printf '%s\n' "${MODEL:-unknown}" ;;
+  esac
+}
+
+build_prompt() {
+  local user_text="$1"
+  local history_file="$2"
+
+  cat <<EOF
+You are a shell command suggester for an interactive bash/zsh session.
+
+Goal:
+- Convert the user's natural language request into exactly one shell command when appropriate.
+- Do not run commands yourself.
+- Prefer commands compatible with the current OS and installed userland tools.
+- Use the current working directory and recent shell history as context.
+- If the request is ambiguous, ask a short clarifying question instead of guessing.
+- If the request is not a shell task, return a short answer.
+
+Risk labels:
+- read_only: lists, searches, prints, inspects, dry-runs.
+- writes_files: creates, edits, formats, renames, moves files.
+- network: fetches remote data or calls network services.
+- installs: installs packages or changes dependencies.
+- destructive: deletes, force overwrites, kills processes, prunes, changes permissions broadly, resets git history.
+- unknown: unclear risk.
+
+Return JSON only with this exact shape:
+{
+  "kind": "command" | "answer" | "clarify",
+  "command": "the command to propose, or empty string",
+  "risk": "read_only" | "writes_files" | "network" | "installs" | "destructive" | "unknown",
+  "explanation": "one short sentence",
+  "question": "clarifying question, or empty string"
+}
+
+Current context:
+cwd: $(pwd)
+shell: ${SHELL_AGENT_SHELL:-${SHELL:-unknown}}
+last_exit: ${SHELL_AGENT_LAST_EXIT:-unknown}
+
+$(platform_context)
+
+$(git_context)
+
+Recent shell history:
+$(history_context "$history_file")
+
+Recent shell-agent transcript:
+$(recent_transcript)
+
+User request:
+$user_text
+EOF
+}
+
+build_agent_prompt() {
+  local user_text="$1"
+  local history_file="$2"
+
+  cat <<EOF
+You are being launched from an interactive bash/zsh session.
+
+Use your native tools to inspect the current repo or environment as needed.
+Default to read-only investigation unless the user explicitly asks you to modify files.
+If you need to propose a risky command, explain it instead of running it.
+Answer the user's request directly and concisely.
+
+Shell context:
+cwd: $(pwd)
+shell: ${SHELL_AGENT_SHELL:-${SHELL:-unknown}}
+last_exit: ${SHELL_AGENT_LAST_EXIT:-unknown}
+
+$(platform_context)
+
+$(git_context)
+
+Recent shell history:
+$(history_context "$history_file")
+
+Recent shell-agent transcript:
+$(recent_transcript)
+
+User request:
+$user_text
+EOF
+}
+
+call_codex() {
+  local prompt="$1"
+  local out schema log model="${MODEL:-$DEFAULT_CODEX_MODEL}"
+  out="$(mktemp "${TMPDIR:-/tmp}/shell-agent-codex.XXXXXX")"
+  schema="$(mktemp "${TMPDIR:-/tmp}/shell-agent-schema.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/shell-agent-codex-log.XXXXXX")"
+  command_schema > "$schema"
+  if codex exec \
+    --model "$model" \
+    --sandbox read-only \
+    --skip-git-repo-check \
+    --color never \
+    --output-schema "$schema" \
+    --output-last-message "$out" \
+    - <<<"$prompt" >"$log" 2>&1; then
+    cat "$out"
+    rm -f "$out" "$schema" "$log"
+  else
+    local status=$?
+    cat "$log" >&2
+    rm -f "$out" "$schema" "$log"
+    return "$status"
+  fi
+}
+
+call_codex_agent() {
+  local prompt="$1"
+  local out log model="${MODEL:-$DEFAULT_CODEX_MODEL}"
+  out="$(mktemp "${TMPDIR:-/tmp}/shell-agent-codex-agent.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/shell-agent-codex-agent-log.XXXXXX")"
+  if codex exec \
+    --model "$model" \
+    --sandbox read-only \
+    --skip-git-repo-check \
+    --color never \
+    --output-last-message "$out" \
+    - <<<"$prompt" >"$log" 2>&1; then
+    cat "$out"
+    rm -f "$out" "$log"
+  else
+    local status=$?
+    cat "$log" >&2
+    rm -f "$out" "$log"
+    return "$status"
+  fi
+}
+
+call_claude() {
+  local prompt="$1"
+  local schema raw model="${MODEL:-$DEFAULT_CLAUDE_MODEL}"
+  schema="$(command_schema)"
+  raw="$(claude --print --output-format json --tools "" --model "$model" --system-prompt "Return only JSON that matches the provided schema. Do not inspect files or run tools." --json-schema "$schema" "$prompt" < /dev/null)"
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$raw" | jq -c '.structured_output // (.result | fromjson? // empty)'
+  else
+    printf '%s\n' "$raw"
+  fi
+}
+
+call_claude_agent() {
+  local prompt="$1"
+  local raw model="${MODEL:-$DEFAULT_CLAUDE_MODEL}"
+  raw="$(claude --print --output-format json --model "$model" --permission-mode plan "$prompt" < /dev/null)"
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$raw" | jq -r '.result // empty'
+  else
+    printf '%s\n' "$raw"
+  fi
+}
+
+call_gemini() {
+  local prompt="$1"
+  local model="${MODEL:-$DEFAULT_GEMINI_MODEL}"
+  local args=(
+    --prompt "$prompt"
+    --model "$model"
+    --output-format text
+    --skip-trust
+    --approval-mode "$GEMINI_AGENT_APPROVAL_MODE"
+  )
+  if [[ "$GEMINI_AGENT_SANDBOX" == "1" ]]; then
+    args+=(--sandbox)
+  fi
+  if [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+    env -u GOOGLE_API_KEY GEMINI_API_KEY="$GOOGLE_API_KEY" gemini "${args[@]}" < /dev/null
+  else
+    gemini "${args[@]}" < /dev/null
+  fi
+}
+
+call_gemini_agent() {
+  local prompt="$1"
+  local model="${MODEL:-$DEFAULT_GEMINI_MODEL}"
+  local args=(
+    --prompt "$prompt"
+    --model "$model"
+    --output-format text
+    --approval-mode plan
+    --skip-trust
+  )
+  if [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+    env -u GOOGLE_API_KEY GEMINI_API_KEY="$GOOGLE_API_KEY" gemini "${args[@]}" < /dev/null
+  else
+    gemini "${args[@]}" < /dev/null
+  fi
+}
+
+command_schema() {
+  cat <<'EOF'
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["command", "answer", "clarify"]
+    },
+    "command": {
+      "type": "string"
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["read_only", "writes_files", "network", "installs", "destructive", "unknown"]
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "question": {
+      "type": "string"
+    }
+  },
+  "required": ["kind", "command", "risk", "explanation", "question"]
+}
+EOF
+}
+
+extract_json() {
+  local raw="$1"
+  if command -v jq >/dev/null 2>&1 && printf '%s' "$raw" | jq -e . >/dev/null 2>&1; then
+    printf '%s\n' "$raw"
+    return 0
+  fi
+
+  printf '%s\n' "$raw" | sed -n '/^{/,/^}/p' | {
+    local candidate
+    candidate="$(cat)"
+    if command -v jq >/dev/null 2>&1 && printf '%s' "$candidate" | jq -e . >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+    else
+      return 1
+    fi
+  }
+}
+
+json_field() {
+  local json="$1"
+  local field="$2"
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$json" | jq -r --arg field "$field" '.[$field] // ""'
+  else
+    python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get(sys.argv[1],""))' "$field" <<<"$json"
+  fi
+}
+
+is_readonly_command() {
+  local command_text="$1"
+  local risk="$2"
+  [[ "$risk" == "read_only" ]] || return 1
+  case "$command_text" in
+    *" rm "*|rm\ *|*" rmdir "*|rmdir\ *|*" mv "*|mv\ *|*" cp "*|cp\ *|*" >"*|*">>"*|*" tee "*|tee\ *|*" xargs rm"*|*"chmod "*|*"chown "*|*"kill "*|*"pkill "*|*"git reset"*|*"git clean"*|*"docker "*prune*|*"npm install"*|*"pnpm install"*|*"yarn add"*)
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+confirm_and_run() {
+  local command_text="$1"
+  local risk="$2"
+  local explanation="$3"
+  local backend="$4"
+  local model="$5"
+  local backend_ms="$6"
+  local total_ms="$7"
+
+  printf '\n%s %s\n' \
+    "$(colorize '2' "shell-agent")" \
+    "$(colorize '2' "backend=$backend model=$model risk=$risk backend_ms=${backend_ms} total_ms=${total_ms}")" >&2
+  printf '%s\n' "$(colorize '1;36' "$command_text")" >&2
+  [[ -n "$explanation" ]] && printf '%s\n' "$explanation" >&2
+
+  if [[ "$AUTO_RUN" == "1" ]] || { [[ "$AUTO_RUN" == "readonly" ]] && is_readonly_command "$command_text" "$risk"; }; then
+    printf 'auto-running\n\n' >&2
+    eval "$command_text"
+    return $?
+  fi
+
+  local prompt='Run? [Enter] run  [e] edit  [n] cancel: '
+  if [[ "$risk" != "read_only" ]]; then
+    prompt='Run? [y] run  [e] edit  [n] cancel: '
+  fi
+
+  local answer
+  printf '%s' "$prompt" >&2
+  IFS= read -r answer || return 130
+
+  if [[ -z "$answer" && "$risk" == "read_only" ]] || [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+    eval "$command_text"
+  elif [[ "$answer" == "e" || "$answer" == "E" ]]; then
+    local edited="$command_text"
+    if [[ -n "${EDITOR:-}" ]]; then
+      local tmp
+      tmp="$(mktemp "${TMPDIR:-/tmp}/shell-agent-edit.XXXXXX")"
+      printf '%s\n' "$command_text" > "$tmp"
+      "$EDITOR" "$tmp"
+      edited="$(sed -n '1p' "$tmp")"
+      rm -f "$tmp"
+    else
+      printf 'Edit command: ' >&2
+      IFS= read -r edited || return 130
+    fi
+    [[ -n "$edited" ]] && eval "$edited"
+  else
+    printf 'cancelled\n' >&2
+    return 127
+  fi
+}
+
+cmd_suggest() {
+  local history_file=""
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --history)
+        [[ $# -ge 2 ]] || die "--history requires a file"
+        history_file="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        args+=("$@")
+        break
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  local user_text="${args[*]}"
+  [[ -n "$user_text" ]] || die "missing request"
+
+  ensure_state
+  append_event "{\"role\":\"user\",\"type\":\"request\",\"cwd\":$(printf '%s' "$PWD" | json_escape),\"text\":$(printf '%s' "$user_text" | json_escape),\"time\":$(printf '%s' "$(date -u +%FT%TZ)" | json_escape)}"
+
+  local start_ms backend_start_ms backend_end_ms ready_ms backend_ms total_ms
+  start_ms="$(now_ms)"
+
+  local backend model prompt raw json kind command_text risk explanation question
+  backend="$(detect_backend)"
+  [[ "$backend" != "none" ]] || die "no backend found. Install codex, claude, or gemini; or set SHELL_AGENT_BACKEND."
+  model="$(effective_model "$backend")"
+
+  prompt="$(build_prompt "$user_text" "$history_file")"
+  backend_start_ms="$(now_ms)"
+  local backend_status=0 backend_err
+  backend_err="$(mktemp "${TMPDIR:-/tmp}/shell-agent-backend-err.XXXXXX")"
+  case "$backend" in
+    codex) raw="$(call_codex "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+    claude) raw="$(call_claude "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+    gemini) raw="$(call_gemini "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+  esac
+  if [[ "$backend_status" -ne 0 ]]; then
+    local error_text
+    error_text="$(cat "$backend_err")"
+    rm -f "$backend_err"
+    die "backend $backend failed: ${error_text:-$raw}"
+  fi
+  rm -f "$backend_err"
+  backend_end_ms="$(now_ms)"
+  backend_ms="$(elapsed_ms "$backend_start_ms" "$backend_end_ms")"
+
+  if ! json="$(extract_json "$raw")"; then
+    printf '%s\n' "$raw"
+    append_event "{\"role\":\"agent\",\"type\":\"raw\",\"backend\":$(printf '%s' "$backend" | json_escape),\"text\":$(printf '%s' "$raw" | json_escape)}"
+    return 0
+  fi
+
+  kind="$(json_field "$json" kind)"
+  command_text="$(json_field "$json" command)"
+  risk="$(json_field "$json" risk)"
+  explanation="$(json_field "$json" explanation)"
+  question="$(json_field "$json" question)"
+
+  if [[ -n "$command_text" && "$kind" != "command" && "$kind" != "clarify" && "$kind" != "answer" ]]; then
+    kind="command"
+  fi
+  case "$risk" in
+    read_only|writes_files|network|installs|destructive|unknown) ;;
+    low) risk="read_only" ;;
+    write|writes|modify|mutation) risk="writes_files" ;;
+    delete|dangerous|high) risk="destructive" ;;
+    *) risk="unknown" ;;
+  esac
+
+  ready_ms="$(now_ms)"
+  total_ms="$(elapsed_ms "$start_ms" "$ready_ms")"
+
+  append_event "{\"role\":\"agent\",\"type\":\"proposal\",\"backend\":$(printf '%s' "$backend" | json_escape),\"model\":$(printf '%s' "$model" | json_escape),\"backend_ms\":$backend_ms,\"total_ms\":$total_ms,\"kind\":$(printf '%s' "$kind" | json_escape),\"command\":$(printf '%s' "$command_text" | json_escape),\"risk\":$(printf '%s' "$risk" | json_escape),\"explanation\":$(printf '%s' "$explanation" | json_escape)}"
+
+  case "$kind" in
+    command)
+      [[ -n "$command_text" ]] || die "backend returned an empty command"
+      confirm_and_run "$command_text" "$risk" "$explanation" "$backend" "$model" "$backend_ms" "$total_ms"
+      ;;
+    clarify)
+      printf 'shell-agent backend=%s model=%s backend_ms=%s total_ms=%s\n' "$backend" "$model" "$backend_ms" "$total_ms" >&2
+      printf '%s\n' "${question:-$explanation}"
+      ;;
+    answer|*)
+      printf 'shell-agent backend=%s model=%s backend_ms=%s total_ms=%s\n' "$backend" "$model" "$backend_ms" "$total_ms" >&2
+      printf '%s\n' "$explanation"
+      ;;
+  esac
+}
+
+cmd_agent() {
+  local history_file=""
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --history)
+        [[ $# -ge 2 ]] || die "--history requires a file"
+        history_file="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        args+=("$@")
+        break
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  local user_text="${args[*]}"
+  [[ -n "$user_text" ]] || die "missing request"
+
+  ensure_state
+  append_event "{\"role\":\"user\",\"type\":\"agent_request\",\"cwd\":$(printf '%s' "$PWD" | json_escape),\"text\":$(printf '%s' "$user_text" | json_escape),\"time\":$(printf '%s' "$(date -u +%FT%TZ)" | json_escape)}"
+
+  local start_ms backend_start_ms backend_end_ms backend_ms total_ms
+  start_ms="$(now_ms)"
+
+  local backend model prompt raw
+  backend="$(detect_backend)"
+  [[ "$backend" != "none" ]] || die "no backend found. Install codex, claude, or gemini; or set SHELL_AGENT_BACKEND."
+  model="$(effective_model "$backend")"
+  prompt="$(build_agent_prompt "$user_text" "$history_file")"
+
+  backend_start_ms="$(now_ms)"
+  local backend_status=0 backend_err
+  backend_err="$(mktemp "${TMPDIR:-/tmp}/shell-agent-backend-err.XXXXXX")"
+  case "$backend" in
+    codex) raw="$(call_codex_agent "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+    claude) raw="$(call_claude_agent "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+    gemini) raw="$(call_gemini_agent "$prompt" 2>"$backend_err")" || backend_status=$? ;;
+  esac
+  backend_end_ms="$(now_ms)"
+  backend_ms="$(elapsed_ms "$backend_start_ms" "$backend_end_ms")"
+  total_ms="$(elapsed_ms "$start_ms" "$backend_end_ms")"
+
+  if [[ "$backend_status" -ne 0 ]]; then
+    local error_text
+    error_text="$(cat "$backend_err")"
+    rm -f "$backend_err"
+    die "backend $backend failed: ${error_text:-$raw}"
+  fi
+  rm -f "$backend_err"
+
+  printf '%s %s\n' \
+    "$(colorize '2' "shell-agent")" \
+    "$(colorize '2' "backend=$backend model=$model mode=agent backend_ms=${backend_ms} total_ms=${total_ms}")" >&2
+  printf '%s\n' "$raw"
+
+  append_event "{\"role\":\"agent\",\"type\":\"answer\",\"backend\":$(printf '%s' "$backend" | json_escape),\"model\":$(printf '%s' "$model" | json_escape),\"backend_ms\":$backend_ms,\"total_ms\":$total_ms,\"text\":$(printf '%s' "$raw" | json_escape)}"
+}
+
+cmd_record() {
+  local command_text=""
+  local exit_code=""
+  local cwd="$PWD"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --command) command_text="$2"; shift 2 ;;
+      --exit) exit_code="$2"; shift 2 ;;
+      --cwd) cwd="$2"; shift 2 ;;
+      *) die "unknown record argument: $1" ;;
+    esac
+  done
+  [[ -n "$command_text" ]] || exit 0
+  [[ "$command_text" == shell-agent* ]] && exit 0
+  append_event "{\"role\":\"shell\",\"type\":\"command\",\"cwd\":$(printf '%s' "$cwd" | json_escape),\"command\":$(printf '%s' "$command_text" | json_escape),\"exit\":$(printf '%s' "${exit_code:-unknown}" | json_escape),\"time\":$(printf '%s' "$(date -u +%FT%TZ)" | json_escape)}"
+}
+
+cmd_init() {
+  cat <<'EOF'
+# Add this to ~/.bashrc or ~/.zshrc, adjusting the path if needed:
+source "$HOME/.shell-agent/shell-agent.sh"
+
+# Optional:
+# export SHELL_AGENT_BACKEND=gemini     # auto|codex|claude|gemini
+# export SHELL_AGENT_MODEL=sonnet       # backend-specific model or alias
+# export SHELL_AGENT_AUTO_RUN=0         # ask before running every suggestion
+EOF
+}
+
+main() {
+  case "${1:-}" in
+    agent) shift; cmd_agent "$@" ;;
+    suggest) shift; cmd_suggest "$@" ;;
+    record) shift; cmd_record "$@" ;;
+    init) cmd_init ;;
+    -h|--help|"") usage ;;
+    --version) printf '%s\n' "$VERSION" ;;
+    *) die "unknown command: $1" ;;
+  esac
+}
+
+main "$@"
