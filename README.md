@@ -96,7 +96,7 @@ zsh and modern Bash builds that call `command_not_found_handle`, but macOS
 
 The helper uses `gemini` by default when available, then OpenAI `codex`, then
 `claude`. Gemini uses `gemini-3.1-flash-lite` by default, Codex uses
-`gpt-5.4-nano`, and Claude uses `haiku`. Override with:
+`gpt-5.4-mini`, and Claude uses `haiku`. Override with:
 
 ```bash
 export SHELL_AGENT_BACKEND=codex    # auto, codex, claude, or gemini
