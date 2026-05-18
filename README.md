@@ -11,7 +11,6 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `speckit-test` | Define/update a Spec Kit feature's testing contract, improve worthwhile test coverage, run checks, and write `specs/<feature>/test-report.md`. |
-| `.agents/smoke-test-agent.md` | Generic smoke-test subagent prompt copied into each project repo. |
 | `specs/test-spec-template.md` | Shared template for feature-level testing contracts. |
 | `specs/test-report-template.md` | Shared template for feature-level testing reports. |
 | `tests/agent/agent-test-template.md` | Shared template for coding-agent-driven browser/live-env tests. |
@@ -58,10 +57,9 @@ gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-
 gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill speckit-test -a codex -y
 ```
 
-Note: `.agents/smoke-test-agent.md`, `specs/test-spec-template.md`,
-`specs/test-report-template.md`, and `tests/agent/agent-test-template.md` are
-installed whenever `install.sh` runs, because they are repo-local assets rather
-than `skills` skills.
+Note: `specs/test-spec-template.md`, `specs/test-report-template.md`, and
+`tests/agent/agent-test-template.md` are installed whenever `install.sh` runs,
+because they are repo-local assets rather than `skills` skills.
 
 ## Update
 

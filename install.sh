@@ -9,7 +9,6 @@ else
   SKILLS_SOURCE="git@github.com:${REPO}.git"
 fi
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/main"
-SMOKE_AGENT_PATH="files/.agents/smoke-test-agent.md"
 TEST_SPEC_TEMPLATE_PATH="files/specs/test-spec-template.md"
 TEST_REPORT_TEMPLATE_PATH="files/specs/test-report-template.md"
 AGENT_TEST_TEMPLATE_PATH="files/tests/agent/agent-test-template.md"
@@ -32,7 +31,6 @@ All arguments are passed through to:
   npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git
 
 The installer also writes:
-  .agents/smoke-test-agent.md
   specs/test-spec-template.md
   specs/test-report-template.md
   tests/agent/agent-test-template.md
@@ -85,7 +83,6 @@ fetch_asset() {
   fi
 }
 
-fetch_asset "$SMOKE_AGENT_PATH" ".agents/smoke-test-agent.md"
 fetch_asset "$TEST_SPEC_TEMPLATE_PATH" "specs/test-spec-template.md"
 fetch_asset "$TEST_REPORT_TEMPLATE_PATH" "specs/test-report-template.md"
 fetch_asset "$AGENT_TEST_TEMPLATE_PATH" "tests/agent/agent-test-template.md"
