@@ -10,7 +10,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | Asset | Purpose |
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
-| `speckit-test` | Define/update a Spec Kit feature's testing contract, improve worthwhile test coverage, run checks, and write `specs/<feature>/test-report.md`. |
+| `test-quality` | Assess and improve testing quality for a project or feature, map coverage depth, run verification, and write owner-facing test quality reports. |
 | `specs/test-spec-template.md` | Shared template for feature-level testing contracts. |
 | `specs/test-report-template.md` | Shared template for feature-level testing reports. |
 | `tests/agent/agent-test-template.md` | Shared template for coding-agent-driven browser/live-env tests. |
@@ -54,7 +54,7 @@ one-line installer and GitHub SSH access for the `skills` clone step.
 
 ```bash
 gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill auto-pr -a codex -y
-gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill speckit-test -a codex -y
+gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill test-quality -a codex -y
 ```
 
 Note: `specs/test-spec-template.md`, `specs/test-report-template.md`, and

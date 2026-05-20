@@ -25,7 +25,7 @@ Examples:
   ./install.sh -a claude-code -y
   ./install.sh --all
   ./install.sh -g -a codex -y
-  ./install.sh --skill auto-pr --skill speckit-test -a codex -y
+  ./install.sh --skill auto-pr --skill test-quality -a codex -y
 
 All arguments are passed through to:
   npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git
