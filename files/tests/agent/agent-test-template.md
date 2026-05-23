@@ -2,9 +2,9 @@
 
 ## Instructions
 
-You are a testing agent. Execute this case against the target environment using
-browser automation, terminal commands, database queries, logs, cloud APIs,
-telemetry, and repo context as needed.
+You are a testing agent for `<project/product name>`. Execute this case against
+the target environment using browser automation, terminal commands, database
+queries, logs, cloud APIs, telemetry, and repo context as needed.
 
 Do not mark PASS without concrete evidence. Do not use production customer data
 unless this case explicitly says production synthetic data is allowed.
@@ -31,13 +31,14 @@ report body, explain the orchestration interruption, and do not end the report
 with PASS, FAIL, or BLOCKED. Release gates should ignore ABORTED reports and
 rerun the case.
 
-When this case drives a browser, collect auditable evidence such as a recording,
-trace, HTML report, or project-standard equivalent. Text-only claims are not
-enough for browser verification.
+When this case drives a browser, collect auditable evidence such as an HTML
+report, screenshot set, video, trace, or project-standard equivalent. Text-only
+claims are not enough for browser verification.
 
-Write the report to a timestamped path:
+When the orchestrator provides `AGENT_VERIFICATION_REPORT_PATH`, write the
+report to that exact path. Otherwise, write the report to a timestamped path:
 
-`test-reports/agent/<feature>-<case-id>-<YYYYMMDD-HHMMSS>.md`
+`agent-test-reports/<feature>-<case-id>-<YYYYMMDD-HHMMSS>.md`
 
 The report must include:
 
@@ -47,7 +48,7 @@ The report must include:
 - Evidence collected
 - Findings
 - Commands, queries, pages, dashboards, or logs inspected
-- Browser recording/report/trace path or URL when a browser was driven
+- Browser evidence path or URL (HTML report, screenshot set, video, or trace) when a browser was driven
 - Cleanup performed
 - Follow-up required
 
@@ -77,10 +78,22 @@ Sources:
 - `<path-to-test-spec.md>`
 - `<path-to-product-or-system-doc.md>`
 
+## Project Context
+
+- Product/project name: `<project/product name>`
+- Local URLs: `<local web/admin/api URLs>`
+- Staging URLs: `<staging web/admin/api URLs>`
+- Production URLs: `<production web/admin/api URLs>`
+- Fixture setup and mutation policy: `<who/what may create, repair, mutate, or delete data>`
+- Required accounts and organizations: `<exact emails, slugs, ids, or creation pattern>`
+- Database/log/cloud access: `<required access, commands, dashboards, or blockers>`
+- Production synthetic data policy: `<read-only or exact approved synthetic fixtures>`
+- Cleanup ownership: `<agent, test owner, janitor job, or manual follow-up owner>`
+
 ## Testing Environments
 
 The orchestrator or tester must specify one listed target environment before
-execution, for example through `AGENT_TEST_TARGET=local` or an equivalent
+execution, for example through `AGENT_VERIFICATION_TARGET=local` or an equivalent
 parameter. If no target environment is specified, stop before preflight and
 report `Status: BLOCKED` with blocker `target_environment_missing`. Record the
 selected target in the report. A PASS is valid only for the selected target

@@ -11,9 +11,12 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `test-quality` | Assess and improve testing quality for a project or feature, map coverage depth, run verification, and write owner-facing test quality reports. |
-| `specs/test-spec-template.md` | Shared template for feature-level testing contracts. |
-| `specs/test-report-template.md` | Shared template for feature-level testing reports. |
+| `test-quality/test-spec-template.md` | Shared template for feature-level testing contracts. |
+| `test-quality/test-report-template.md` | Shared template for feature-level testing reports. |
 | `tests/agent/agent-test-template.md` | Shared template for coding-agent-driven browser/live-env tests. |
+| `tests/agent/agent-test-suites.example.json` | Example manifest for grouping agent test cases into runnable suites. |
+| `tests/agent/README.md` | Setup and configuration guide for the agent test runner and manifest. |
+| `test-quality/run-agent-verification.ts` | Configurable runner for executing agent test suites and enforcing the report status contract. |
 | `files/shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
 
 ## Install
@@ -57,9 +60,16 @@ gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-
 gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- --skill test-quality -a codex -y
 ```
 
-Note: `specs/test-spec-template.md`, `specs/test-report-template.md`, and
-`tests/agent/agent-test-template.md` are installed whenever `install.sh` runs,
-because they are repo-local assets rather than `skills` skills.
+Note: `test-quality/test-spec-template.md`,
+`test-quality/test-report-template.md`,
+`test-quality/run-agent-verification.ts`,
+`tests/agent/agent-test-template.md`,
+`tests/agent/agent-test-suites.example.json`, and `tests/agent/README.md` are
+installed whenever `install.sh` runs, because they are repo-local assets rather
+than `skills` skills. Each target repo still owns its real
+`tests/agent/agent-test-suites.json`, case files, fixtures, auth/session
+bootstrap, CI wiring, engine secrets, MCP config, and environment mutation
+policies.
 
 ## Update
 

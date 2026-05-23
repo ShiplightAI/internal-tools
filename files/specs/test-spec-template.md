@@ -162,7 +162,8 @@ values.
 
 ## Report Expectations
 
-- Stable report path: `specs/<feature-directory-name>/test-report.md`.
+- Stable report path: use the report location defined by the active testing
+  workflow or skill.
 - Report every test case as `PASS`, `FAIL`, `PARTIAL`, `BLOCKED`, `SKIPPED`,
   `HUMAN_REQUIRED`, or `DEFERRED`.
 - Put blocking failures first in `## Findings` or `## Deferred / Residual Risk`.

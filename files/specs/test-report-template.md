@@ -65,7 +65,7 @@ Use statuses consistently: `COVERED`, `PARTIAL`, `IMPLICIT`, `NOT COVERED`,
 ## Agent Test Evidence
 
 - `<agent test path>` — Status: `<PASS/FAIL/BLOCKED>`. Evidence:
-  `<report/recording/trace path or URL>`.
+  `<report/screenshot/video/trace path or URL>`.
 
 ## Manual Verification Log
 

@@ -76,7 +76,7 @@ Keep categories distinct in both artifacts:
 | Category | Use for | Evidence |
 | --- | --- | --- |
 | Automated tests | Unit, contract, integration, E2E, scripts, static checks, CI | Command output and file paths |
-| Agent tests | Coding-agent-driven browser/live-env verification | Written report plus trace, recording, HTML report, screenshot set, or project-standard artifact |
+| Agent tests | Coding-agent-driven browser/live-env verification | Written report plus HTML report, screenshot set, video, trace, or project-standard artifact |
 | Manual checks | Human-observed checks | Human notes, optional report/artifact links |
 | Live telemetry | Production/staging SLOs and operational signals | Dashboard/query/link and timestamp |
 | Deferred / implicit | Low-value automation, source-level invariant, missing environment, or future sweep item | Reason and retest path |
@@ -218,6 +218,44 @@ project's established browser, E2E, YAML, mobile, load, migration, or contract
 test workflow to create, update, validate, and run those tests. Then map the
 resulting specs, test files, command output, and run artifacts back into this
 skill's coverage matrix and test report.
+
+## Agent Test Authoring
+
+Use agent tests when browser or live-environment workflows need flexible,
+auditable proof and a deterministic E2E test would be premature, brittle, or
+too expensive. Prefer converting high-value stable agent flows to the project's
+standard E2E format later.
+
+Before authoring an agent test, check for `tests/agent/agent-test-template.md`.
+If it exists, treat it as the authoritative local convention. Do not rediscover
+or replace it through broad search unless the user explicitly asks to update the
+local convention.
+
+If no local convention exists and an agent test is the cheapest sufficient
+proof, scaffold from the installed internal assets:
+
+- `tests/agent/agent-test-template.md`
+- `tests/agent/agent-test-suites.example.json`
+- `test-quality/run-agent-verification.ts`
+
+If those files have not been installed but the internal skill bundle is
+available, use the bundled sources under `files/tests/agent/`:
+
+- `files/tests/agent/agent-test-template.md`
+- `files/tests/agent/agent-test-suites.example.json`
+- `files/tests/agent/run-agent-verification.ts`
+- `files/tests/agent/README.md`
+
+Each repo owns its real `tests/agent/agent-test-suites.json`, actual case files
+under `tests/agent/<feature>/`, fixture setup commands, auth/session bootstrap,
+CI wiring, engine secrets and MCP config, staging/production mutation policies,
+and cleanup ownership.
+
+Agent reports should use the local runner/report convention when present. Map
+the report path, final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and evidence
+artifacts such as HTML reports, screenshot sets, videos, or traces back into
+`test-quality/<target>/test-report.md`. Text-only browser claims are not
+sufficient evidence.
 
 ## Artifact Skeletons
 

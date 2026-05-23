@@ -12,6 +12,9 @@ RAW_BASE="https://raw.githubusercontent.com/${REPO}/main"
 TEST_SPEC_TEMPLATE_PATH="files/specs/test-spec-template.md"
 TEST_REPORT_TEMPLATE_PATH="files/specs/test-report-template.md"
 AGENT_TEST_TEMPLATE_PATH="files/tests/agent/agent-test-template.md"
+AGENT_TEST_RUNNER_PATH="files/tests/agent/run-agent-verification.ts"
+AGENT_TEST_SUITES_EXAMPLE_PATH="files/tests/agent/agent-test-suites.example.json"
+AGENT_TEST_README_PATH="files/tests/agent/README.md"
 
 usage() {
   cat <<'EOF'
@@ -31,9 +34,12 @@ All arguments are passed through to:
   npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git
 
 The installer also writes:
-  specs/test-spec-template.md
-  specs/test-report-template.md
+  test-quality/test-spec-template.md
+  test-quality/test-report-template.md
+  test-quality/run-agent-verification.ts
   tests/agent/agent-test-template.md
+  tests/agent/agent-test-suites.example.json
+  tests/agent/README.md
 EOF
 }
 
@@ -83,8 +89,11 @@ fetch_asset() {
   fi
 }
 
-fetch_asset "$TEST_SPEC_TEMPLATE_PATH" "specs/test-spec-template.md"
-fetch_asset "$TEST_REPORT_TEMPLATE_PATH" "specs/test-report-template.md"
+fetch_asset "$TEST_SPEC_TEMPLATE_PATH" "test-quality/test-spec-template.md"
+fetch_asset "$TEST_REPORT_TEMPLATE_PATH" "test-quality/test-report-template.md"
+fetch_asset "$AGENT_TEST_RUNNER_PATH" "test-quality/run-agent-verification.ts"
 fetch_asset "$AGENT_TEST_TEMPLATE_PATH" "tests/agent/agent-test-template.md"
+fetch_asset "$AGENT_TEST_SUITES_EXAMPLE_PATH" "tests/agent/agent-test-suites.example.json"
+fetch_asset "$AGENT_TEST_README_PATH" "tests/agent/README.md"
 
 echo "Installed Shiplight internal agent assets."
