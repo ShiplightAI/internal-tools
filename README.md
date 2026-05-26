@@ -10,6 +10,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | Asset | Purpose |
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
+| `code-review-run` | Run a standalone, max-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
 | `test-quality` | Assess and improve testing quality for a project or feature, map coverage depth, run verification, and write owner-facing test quality reports. |
 | `test-quality/test-spec-template.md` | Shared template for feature-level testing contracts. |
 | `test-quality/test-report-template.md` | Shared template for feature-level testing reports. |

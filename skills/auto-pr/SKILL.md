@@ -58,6 +58,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
      - Fix items labeled **BUG**, **CRITICAL**, or **🔴**
      - Fix trivial **MINOR**/**NIT**/**SUGGESTION** items if cheap
      - Commit, push, and re-invoke the local skill on the updated HEAD
+     - Treat each re-invocation as a **fresh** review and reconcile prior findings (Fixed / Still-open / Regressed) before acting — a fix can regress previously-clean code
      - Stop iterating locally once no blocking issues remain or after 2 passes — diminishing returns; the bot will catch what's left
 
 6. **Push any pre-review fixes** to the PR branch (if step 5 made changes). The PR auto-updates; the bot picks up the latest HEAD.
@@ -76,7 +77,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
    - Look for items labeled **BUG**, **CRITICAL**, or **🔴** in the review body — these must be fixed before merging
    - Items labeled **MINOR**, **NIT**, **SUGGESTION**, or **LOGIC LOOKS CORRECT** are informational and do not block merging, but fix them if the fix is trivial
    - For each blocking issue: fix it, commit, push, and wait for the bot to post a new review (the old review will be superseded)
-   - Optionally re-run the local pre-review (step 5) on the updated diff to validate fixes before waiting on the bot again — speeds up iteration
+   - Optionally re-run the local pre-review (step 5) on the updated diff to validate fixes before waiting on the bot again — speeds up iteration (treat each re-run as a fresh review that reconciles prior findings)
    - Repeat until no blocking issues remain or 3 iterations are exhausted
    - If still blocking after 3 iterations, **stop and tell the user**
 
@@ -92,6 +93,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
 - Use `repos/{owner}/{repo}` placeholders in `gh api` calls — `gh` substitutes the current repo, so the skill works in any repo without hardcoding the owner/name.
 - Do not add Co-Authored-By or generation metadata to commits
 - The local `/code-review:code-review` skill is a pre-pass to reduce GHA round-trips — it does NOT replace the bot review; the bot review in step 7 is required before merge **when the bot is installed**. If the bot never posts, ask the user before merging without it.
+- For a deeper **standalone** review outside the PR flow (effort levels, saving a ranked round-N report, multi-round reconciliation), use the `code-review-run` skill.
 - When invoking the local skill, do NOT pass `--comment`; act on findings in-conversation rather than duplicating comments on the PR (the bot does that)
 - The Claude bot posts as issue comments, NOT PR reviews — use `/issues/` API not `/pulls/.../reviews`
 - Keep commit messages clean and professional
