@@ -60,6 +60,18 @@ The skill writes a file only when the prompt asks for it. Default convention:
 - Per finding: severity, `file:line`, the bug, a concrete failure scenario, and a fix direction. Plus a short "verified-and-cleared" section for things checked that are NOT bugs.
 - Severity scale: to stay consistent with `auto-pr` and the Claude bot, label blockers **BUG** / **CRITICAL** / **🔴** and non-blockers **MINOR** / **NIT** / **SUGGESTION** / **LOGIC LOOKS CORRECT**.
 
+## Review-fix loop
+
+By default, this skill is an active review-and-remediation loop, not a report-only pass. Unless the user explicitly asks for review-only output:
+
+1. Run `/code-review max <scope>` on the current diff.
+2. Address every blocking finding labeled **BUG**, **CRITICAL**, or **🔴**. Keep fixes within the requested scope.
+3. Run the relevant targeted verification for the fixes.
+4. Run a fresh `/code-review max <scope>` again on the updated diff.
+5. Repeat this review -> fix -> verify -> fresh review loop until the latest review has no **BUG**, **CRITICAL**, or **🔴** findings.
+
+Treat non-blocking **MINOR**, **NIT**, **SUGGESTION**, and **LOGIC LOOKS CORRECT** items as optional; fix them only when the fix is cheap and low-risk. Do not stop after the first review if blocking findings remain. Stop only when blockers are gone, the user asked for review-only output, or a blocking finding cannot be resolved safely; in that case, explain the blocker clearly.
+
 ## Multi-round reviews
 
 A change usually needs more than one pass. Treat each round as a **fresh** review of the whole current diff — do NOT assume prior conclusions still hold (a later commit can introduce a bug into previously-cleared code). Seed each new round with the previous report so it tracks finding lifecycle:
