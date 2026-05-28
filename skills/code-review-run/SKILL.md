@@ -41,12 +41,14 @@ claude -p "/code-review max <scope>. Write the findings to \
 code-reviews/<feature-slug>/code-review-$(date +%F)-round-1.md as a ranked markdown \
 report: severity, file:line, the bug, a concrete failure scenario, and a fix \
 direction. Add a 'verified-and-cleared' section." \
-  --effort max --model opus --permission-mode bypassPermissions
+  --effort max --model opus --permission-mode bypassPermissions \
+  --output-format stream-json --include-partial-messages --verbose
 ```
 
 - `<scope>`: a feature/dir, a set of files, or a commit range. Omit to review the current branch diff. `<scope>` becomes one shell arg — keep it in a single quoted string; `$(...)` expands in your shell first (handy for dates).
 - `--permission-mode bypassPermissions` is required for unattended runs (the review uses Bash/git, spawns subagents, and writes the report) — use only in a repo you trust, or scope access with `--allowedTools`.
-- Optional: `--output-format stream-json --verbose` (CI logs), `--max-budget-usd <n>` (spend cap), and `--comment` inside the skill args (`/code-review max <scope> --comment`) to post inline PR comments instead of writing a file.
+- `--output-format stream-json --include-partial-messages --verbose` is the default for headless runs so long reviews emit realtime JSON events and partial assistant chunks before any external timeout. It only works with `--print` / `-p`. If logs are too noisy, drop `--include-partial-messages`.
+- Optional: `--max-budget-usd <n>` (spend cap), and `--comment` inside the skill args (`/code-review max <scope> --comment`) to post inline PR comments instead of writing a file.
 
 ## Saving a report
 
