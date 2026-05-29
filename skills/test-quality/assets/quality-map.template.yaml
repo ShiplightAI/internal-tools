@@ -1,0 +1,82 @@
+schema_version: 1
+
+target:
+  id: "001-example-feature"
+  name: "<Human-readable target name>"
+  scope: "feature" # feature | project | module | pr | ticket
+  aliases: [] # Legacy or alternate slugs, for example ["enterprise-rate-card"].
+  source_refs:
+    - path: "<path/to/spec-or-prd.md>"
+      label: "<optional source label>"
+
+assessment:
+  updated_at: "<ISO-8601 timestamp>"
+  branch: "<branch-or-unknown>"
+  commit: "<git-sha-or-unknown>"
+  generated_by: "test-quality"
+  overall_status: "UNKNOWN" # PASS | FAIL | PARTIAL | BLOCKED | NOT RUN | DEFERRED | ABORTED | UNKNOWN
+  overall_confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
+
+scoring_model:
+  risk_scale: "1=low, 3=important, 5=release-critical"
+  factors:
+    - "risk_weight"
+    - "breadth"
+    - "depth"
+    - "latest_result"
+    - "reliability"
+    - "freshness"
+    - "ci_gating"
+  note: "Scores are decision aids; preserve the underlying evidence and residual-risk rationale."
+
+expectations:
+  - id: "<stable-expectation-id>"
+    title: "<Behavior, invariant, workflow, or operational promise>"
+    description: "<Short owner-readable expectation>"
+    source_type: "SOURCE" # SOURCE | IMPLEMENTATION | INFERRED
+    source_refs:
+      - path: "<path/to/source.md>"
+        anchor: "<optional-anchor-or-line-ref>"
+
+    category: "other" # billing | auth | security | data | ui | api | ops | performance | privacy | compliance | other
+    priority: "P1" # P0 | P1 | P2 | P3 | UNKNOWN
+    risk:
+      weight: 3 # 1..5
+      rationale: "<Why failure matters>"
+
+    tasks:
+      - id: "<task-id>"
+        path: "<path/to/tasks.md>"
+        status: "unknown" # planned | in_progress | done | deferred | blocked | unknown
+
+    evidence:
+      - id: "<stable-evidence-id>"
+        type: "integration" # unit | contract | integration | e2e | agent | manual | telemetry | static | smoke | script | other
+        path: "<test-or-report-path>"
+        command: "<command used to run or verify this evidence>"
+        depth: "DIRECT" # DIRECT | INDIRECT | STATIC | MANUAL | IMPLICIT | MISSING | BLOCKED
+        ci_gated: false
+        reliability: "UNKNOWN" # STRONG | MODERATE | WEAK | FLAKY | UNKNOWN
+        latest_result:
+          status: "NOT RUN" # PASS | FAIL | PARTIAL | BLOCKED | SKIPPED | NOT RUN | DEFERRED | ABORTED | UNKNOWN
+          run_at: "<ISO-8601 timestamp or null>"
+          commit: "<git-sha-or-unknown>"
+          artifacts:
+            - path: "<optional-report-screenshot-trace-or-dashboard-path>"
+              kind: "report" # report | screenshot | video | trace | dashboard | log | other
+
+    evaluation:
+      coverage_status: "NOT COVERED" # COVERED | PARTIAL | IMPLICIT | NOT COVERED | NOT MEASURED | MANUAL | BLOCKED | DEFERRED
+      confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
+      breadth: "WEAK" # STRONG | MODERATE | WEAK | MISSING | UNKNOWN
+      depth: "WEAK" # STRONG | MODERATE | WEAK | MISSING | UNKNOWN
+      freshness: "UNKNOWN" # FRESH | ACCEPTABLE | STALE | UNKNOWN
+      weighted_confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
+      residual_risk: "<What remains unproven, weakly proven, stale, or environment-dependent>"
+      next_best_proof: "<Highest-value follow-up evidence, or null if none>"
+
+gap_summary:
+  release_blockers: []
+  high_risk_gaps: []
+  stale_or_flaky_evidence: []
+  deferred_items: []

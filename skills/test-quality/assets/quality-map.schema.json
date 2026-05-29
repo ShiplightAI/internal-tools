@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shiplight.dev/schemas/test-quality/quality-map.schema.json",
+  "title": "Test Quality Map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "target", "assessment", "expectations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "scope", "source_refs"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "scope": { "enum": ["feature", "project", "module", "pr", "ticket"] },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "source_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRef" }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["updated_at", "branch", "commit", "generated_by", "overall_status", "overall_confidence"],
+      "properties": {
+        "updated_at": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string" },
+        "commit": { "type": "string" },
+        "generated_by": { "type": "string" },
+        "overall_status": { "$ref": "#/$defs/resultStatus" },
+        "overall_confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "scoring_model": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "expectations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/expectation" }
+    },
+    "gap_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "release_blockers": { "type": "array", "items": { "type": "string" } },
+        "high_risk_gaps": { "type": "array", "items": { "type": "string" } },
+        "stale_or_flaky_evidence": { "type": "array", "items": { "type": "string" } },
+        "deferred_items": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "anchor": { "type": "string" }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "source_type", "category", "priority", "risk", "evidence", "evaluation"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "source_type": { "enum": ["SOURCE", "IMPLEMENTATION", "INFERRED"] },
+        "source_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRef" }
+        },
+        "category": {
+          "enum": ["billing", "auth", "security", "data", "ui", "api", "ops", "performance", "privacy", "compliance", "other"]
+        },
+        "priority": { "enum": ["P0", "P1", "P2", "P3", "UNKNOWN"] },
+        "risk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["weight", "rationale"],
+          "properties": {
+            "weight": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "rationale": { "type": "string" }
+          }
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "path", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "path": { "type": "string" },
+              "status": { "enum": ["planned", "in_progress", "done", "deferred", "blocked", "unknown"] }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "evaluation": { "$ref": "#/$defs/evaluation" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "path", "depth", "ci_gated", "latest_result"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["unit", "contract", "integration", "e2e", "agent", "manual", "telemetry", "static", "smoke", "script", "other"]
+        },
+        "path": { "type": "string" },
+        "command": { "type": "string" },
+        "depth": { "$ref": "#/$defs/depth" },
+        "ci_gated": { "type": "boolean" },
+        "reliability": { "enum": ["STRONG", "MODERATE", "WEAK", "FLAKY", "UNKNOWN"] },
+        "latest_result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "$ref": "#/$defs/resultStatus" },
+            "run_at": { "type": ["string", "null"] },
+            "commit": { "type": ["string", "null"] },
+            "artifacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "kind"],
+                "properties": {
+                  "path": { "type": "string" },
+                  "kind": { "enum": ["report", "screenshot", "video", "trace", "dashboard", "log", "other"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage_status", "confidence", "breadth", "depth", "freshness", "weighted_confidence", "residual_risk"],
+      "properties": {
+        "coverage_status": { "$ref": "#/$defs/coverageStatus" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "breadth": { "enum": ["STRONG", "MODERATE", "WEAK", "MISSING", "UNKNOWN"] },
+        "depth": { "enum": ["STRONG", "MODERATE", "WEAK", "MISSING", "UNKNOWN"] },
+        "freshness": { "enum": ["FRESH", "ACCEPTABLE", "STALE", "UNKNOWN"] },
+        "weighted_confidence": { "$ref": "#/$defs/confidence" },
+        "residual_risk": { "type": "string" },
+        "next_best_proof": { "type": ["string", "null"] }
+      }
+    },
+    "depth": {
+      "enum": ["DIRECT", "INDIRECT", "STATIC", "MANUAL", "IMPLICIT", "MISSING", "BLOCKED"]
+    },
+    "resultStatus": {
+      "enum": ["PASS", "FAIL", "PARTIAL", "BLOCKED", "SKIPPED", "NOT RUN", "DEFERRED", "ABORTED", "UNKNOWN"]
+    },
+    "coverageStatus": {
+      "enum": ["COVERED", "PARTIAL", "IMPLICIT", "NOT COVERED", "NOT MEASURED", "MANUAL", "BLOCKED", "DEFERRED"]
+    },
+    "confidence": {
+      "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+    }
+  }
+}

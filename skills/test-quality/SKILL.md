@@ -1,6 +1,6 @@
 ---
 name: test-quality
-description: Assess and improve testing quality for a project or feature by defining what should be tested, mapping current evidence depth, adding worthwhile tests or checks, running verification, and writing owner-facing test quality reports.
+description: Assess and improve testing quality for a project or feature by defining what should be tested, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing owner-facing test quality reports.
 user_invocable: true
 ---
 
@@ -28,6 +28,17 @@ Separate testing into two layers:
 Testing quality is not test count. Optimize for justified confidence per unit
 of cost, stability, latency, diagnostic value, and maintenance.
 
+Represent quality as an evidence graph:
+
+```text
+expectation -> task/implementation -> test intent -> executable evidence ->
+latest result -> weighted evaluation -> residual risk
+```
+
+Each expectation should carry a risk weight before evaluating tests. Evidence
+should then be judged by breadth, depth, latest result, reliability, freshness,
+and whether it is CI/release gated. Do not weight every test equally.
+
 ## Scope Resolution
 
 Resolve the target before writing artifacts or adding tests:
@@ -39,6 +50,25 @@ Resolve the target before writing artifacts or adding tests:
 Use explicit user input first. If the user does not provide a source, silently
 infer the target from current git changes, repo structure, docs, tests, package
 scripts, and CI config. Mark inferred expectations as `INFERRED` in artifacts.
+
+## Target Slug Naming
+
+Use stable target slugs so specs, tasks, quality maps, reports, tests, and UI
+routes can be joined reliably.
+
+- Project scope uses the fixed slug `project`.
+- Feature, module, PR, and ticket scopes use Speckit-style
+  `NNN-kebab-case-name`, for example `026-enterprise-rate-card`.
+- If a source folder, branch, issue, or spec already has a numeric prefix, reuse
+  that exact slug. Do not drop `NNN-`.
+- If a repo has `specs/NNN-feature-name`, the quality target for that feature
+  must be `test-quality/NNN-feature-name/`.
+- If no numeric source exists, choose the next unused three-digit prefix in the
+  repo's feature sequence before creating the target. Record the choice in
+  `quality-map.yaml`.
+- If legacy unnumbered artifacts exist for a numbered feature, migrate or update
+  toward the canonical numbered slug instead of creating a second parallel
+  quality target. Preserve old slugs under `target.aliases` when useful.
 
 ## Source Discovery
 
@@ -61,17 +91,47 @@ Do not invent requirements. Distinguish `SOURCE` expectations from
 Create or update these artifacts:
 
 - Feature target: `test-quality/<target-slug>/test-spec.md`
+- Feature target: `test-quality/<target-slug>/quality-map.yaml`
 - Feature target: `test-quality/<target-slug>/test-report.md`
 - Project target: `test-quality/project/test-spec.md`
+- Project target: `test-quality/project/quality-map.yaml`
 - Project target: `test-quality/project/test-report.md`
 
 If the repo has an obvious existing convention for test quality artifacts, use
-that convention only when it clearly fits. Do not require `specs/`, `plan.md`,
-`tasks.md`, `.specify/`, or Spec Kit templates.
+that convention only when it clearly fits, but keep the canonical target slug
+format above. Do not require `specs/`, `plan.md`, `tasks.md`, `.specify/`, or
+Spec Kit templates.
+
+`quality-map.yaml` is the canonical machine-readable artifact. Markdown files
+are owner-readable projections and narrative summaries. When creating a new map,
+copy and fill `assets/quality-map.template.yaml`. When tooling or validation is
+available, validate against `assets/quality-map.schema.json`.
+
+## Quality Map
+
+Maintain `quality-map.yaml` around expectations, not test files. Each
+expectation should include:
+
+- Stable expectation id and title.
+- Source type: `SOURCE`, `IMPLEMENTATION`, or `INFERRED`.
+- Source references to specs, PRDs, issues, code, docs, or user input.
+- Category and priority.
+- Risk weight from 1 to 5 with rationale.
+- Related implementation tasks when available.
+- Evidence entries for unit, contract, integration, E2E, agent, manual,
+  telemetry, static, smoke, script, or project-specific checks.
+- Latest result status, command or artifact path, commit/timestamp when known,
+  and whether the evidence is CI/release gated.
+- Evaluation fields: coverage status, confidence, breadth, depth, freshness,
+  weighted confidence, residual risk, and next best proof.
+
+Use the map for agent handoff, UI visualization, release gates, trend analysis,
+and gap prioritization. Preserve the input fields behind any confidence
+judgment so scoring formulas can evolve without losing the audit trail.
 
 ## Evidence Categories
 
-Keep categories distinct in both artifacts:
+Keep categories distinct in `quality-map.yaml` and the Markdown report:
 
 | Category | Use for | Evidence |
 | --- | --- | --- |
@@ -97,7 +157,7 @@ Use depth labels to explain confidence, not just whether a row exists:
 - `BLOCKED`: environment, access, dependency, fixture, or tool limitation.
 
 Use result statuses consistently in reports: `PASS`, `FAIL`, `PARTIAL`,
-`BLOCKED`, `SKIPPED`, `NOT RUN`, or `DEFERRED`.
+`BLOCKED`, `SKIPPED`, `NOT RUN`, `DEFERRED`, `ABORTED`, or `UNKNOWN`.
 
 Use coverage statuses consistently in matrices: `COVERED`, `PARTIAL`,
 `IMPLICIT`, `NOT COVERED`, `NOT MEASURED`, `MANUAL`, `BLOCKED`, or `DEFERRED`.
@@ -118,7 +178,8 @@ Use overall confidence:
 
 - Identify project or feature scope.
 - Record source material used and source material not found.
-- Locate prior `test-spec.md` and `test-report.md` for this target if present.
+- Locate prior `test-spec.md`, `quality-map.yaml`, and `test-report.md` for
+  this target if present.
 - Read changed implementation and tests when git context exists, using the
   branch merge base when available.
 
@@ -140,7 +201,7 @@ Include:
 
 ### 3. Inventory Testing How
 
-Find existing evidence and map it to the testing what:
+Find existing evidence and map it to the testing what in `quality-map.yaml`:
 
 - Unit tests and source-adjacent tests.
 - Contract/API/schema/action boundary tests.
@@ -157,6 +218,10 @@ Find existing evidence and map it to the testing what:
 For each weak or missing testing what, choose the cheapest sufficient proof.
 Consider confidence gained, risk severity, stakeholder visibility, flake risk,
 runtime, fixture complexity, cleanup burden, diagnostic value, and maintenance.
+
+Prioritize gaps with risk-weighted judgment. A release-critical billing,
+security, data isolation, or destructive-admin expectation with weak direct
+evidence should outrank many low-risk UI or display gaps.
 
 Useful defaults:
 
@@ -192,7 +257,27 @@ Run targeted checks first, then broader suites when justified:
 Record exact commands, outcomes, and important failure details. If a capability
 is missing, mark it `BLOCKED` or `NOT MEASURED`; do not claim it passed.
 
-### 7. Write Or Update Test Report
+### 7. Write Or Update Quality Map
+
+Write `test-quality/<target>/quality-map.yaml` as the structured evidence
+graph. Use the bundled template for new maps:
+
+- `assets/quality-map.template.yaml`
+
+Use the bundled schema as the validation contract for tools and UIs:
+
+- `assets/quality-map.schema.json`
+
+On repeat runs:
+
+- Preserve stable expectation and evidence ids when the meaning is unchanged.
+- Refresh latest results, timestamps, commits, artifacts, and CI-gating status.
+- Update weighted evaluations only when evidence or risk actually changed.
+- Mark stale, flaky, blocked, missing, or deferred evidence explicitly.
+- Add release blockers, high-risk gaps, stale/flaky evidence, and deferred
+  items to `gap_summary` when applicable.
+
+### 8. Write Or Update Test Report
 
 Write `test-quality/<target>/test-report.md` as the current evidence snapshot.
 Include:
@@ -200,7 +285,8 @@ Include:
 - Target, scope, source material, branch/commit when available, and timestamp.
 - Overall status and confidence.
 - Commands run and pass/fail/block results.
-- Coverage matrix with evidence depth.
+- Coverage matrix derived from `quality-map.yaml`, including risk weight,
+  evidence depth, latest result, weighted confidence, and residual risk.
 - Tests added or updated.
 - Blocking findings first.
 - Deferred items and residual risk with retest paths.
@@ -217,7 +303,7 @@ implementation details rather than inventing tests directly. For example, use a
 project's established browser, E2E, YAML, mobile, load, migration, or contract
 test workflow to create, update, validate, and run those tests. Then map the
 resulting specs, test files, command output, and run artifacts back into this
-skill's coverage matrix and test report.
+skill's `quality-map.yaml`, coverage matrix, and test report.
 
 ## Agent Test Authoring
 
@@ -254,6 +340,7 @@ and cleanup ownership.
 Agent reports should use the local runner/report convention when present. Map
 the report path, final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and evidence
 artifacts such as HTML reports, screenshot sets, videos, or traces back into
+`test-quality/<target>/quality-map.yaml` and
 `test-quality/<target>/test-report.md`. Text-only browser claims are not
 sufficient evidence.
 
@@ -278,12 +365,59 @@ Use these sections unless the repo has a better local convention.
 ## Coverage Notes
 ```
 
+`quality-map.yaml`:
+
+```yaml
+schema_version: 1
+target:
+  id: 001-example-feature # or project for project scope
+  name: <target name>
+  scope: feature
+  aliases: []
+  source_refs: []
+assessment:
+  updated_at: <ISO-8601 timestamp>
+  branch: <branch-or-unknown>
+  commit: <git-sha-or-unknown>
+  generated_by: test-quality
+  overall_status: UNKNOWN
+  overall_confidence: UNKNOWN
+expectations:
+  - id: <stable-expectation-id>
+    title: <behavior or invariant>
+    source_type: SOURCE
+    category: other
+    priority: P1
+    risk:
+      weight: 3
+      rationale: <why failure matters>
+    evidence: []
+    evaluation:
+      coverage_status: NOT COVERED
+      confidence: UNKNOWN
+      breadth: MISSING
+      depth: MISSING
+      freshness: UNKNOWN
+      weighted_confidence: UNKNOWN
+      residual_risk: <what remains unproven>
+      next_best_proof: <highest-value follow-up evidence>
+gap_summary:
+  release_blockers: []
+  high_risk_gaps: []
+  stale_or_flaky_evidence: []
+  deferred_items: []
+```
+
+For the full starter, copy `assets/quality-map.template.yaml`. For validation,
+use `assets/quality-map.schema.json`.
+
 `test-report.md`:
 
 ```markdown
 # Test Report: <Target>
 
 **Test spec**: [test-spec.md](./test-spec.md)
+**Quality map**: [quality-map.yaml](./quality-map.yaml)
 **Branch / commit**: <branch and commit if available>
 **Last updated**: <YYYY-MM-DD>
 **Tester**: <agent or person>
@@ -306,6 +440,8 @@ Use these sections unless the repo has a better local convention.
 - This skill may edit tests, test fixtures, test scripts, `test-quality/**`,
   and project-standard test evidence folders.
 - Avoid unrelated refactors and unrelated production-code changes.
+- Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
+  enums, and avoid free-form dialects when a field already exists.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
