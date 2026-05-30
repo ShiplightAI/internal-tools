@@ -22,7 +22,7 @@ Separate testing into two layers:
 1. **Testing what**: behaviors, properties, risks, and expectations that must
    be verified to trust the project or feature.
 2. **Testing how**: evidence used to verify the what: unit, contract,
-   integration, E2E, agent browser tests, manual checks, telemetry, static
+   integration, E2E, agent tests, manual checks, telemetry, static
    checks, smoke tests, CI, or project-specific mechanisms.
 
 Testing quality is not test count. Optimize for justified confidence per unit
@@ -136,7 +136,7 @@ Keep categories distinct in `quality-map.yaml` and the Markdown report:
 | Category | Use for | Evidence |
 | --- | --- | --- |
 | Automated tests | Unit, contract, integration, E2E, scripts, static checks, CI | Command output and file paths |
-| Agent tests | Coding-agent-driven browser/live-env verification | Written report plus HTML report, screenshot set, video, trace, or project-standard artifact |
+| Agent tests | Coding-agent-driven UI, API, DB, full-stack, or live-env verification | Written report plus HTML report, screenshot set, video, trace, logs, state notes, or project-standard artifact |
 | Manual checks | Human-observed checks | Human notes, optional report/artifact links |
 | Live telemetry | Production/staging SLOs and operational signals | Dashboard/query/link and timestamp |
 | Deferred / implicit | Low-value automation, source-level invariant, missing environment, or future sweep item | Reason and retest path |
@@ -208,7 +208,7 @@ Find existing evidence and map it to the testing what in `quality-map.yaml`:
 - Integration tests for DB, transactions, jobs, migrations, and cross-module
   behavior.
 - E2E/browser tests.
-- Agent-driven browser/live-env checks.
+- Agent-driven UI, API, DB, full-stack, or live-env checks.
 - Manual verification notes.
 - Telemetry dashboards, queries, or SLOs.
 - Typecheck, lint, static analysis, scripts, smoke checks, and CI.
@@ -252,7 +252,8 @@ Run targeted checks first, then broader suites when justified:
 - Typecheck, lint, build, migration, smoke, or CI-equivalent commands.
 - Migration generation/application checks when schema or data migrations are in
   scope.
-- Agent/browser checks when required by the test spec.
+- Agent checks when required by the test spec, including browser, API, DB, or
+  mixed full-stack verification.
 
 Record exact commands, outcomes, and important failure details. If a capability
 is missing, mark it `BLOCKED` or `NOT MEASURED`; do not claim it passed.
@@ -307,10 +308,24 @@ skill's `quality-map.yaml`, coverage matrix, and test report.
 
 ## Agent Test Authoring
 
-Use agent tests when browser or live-environment workflows need flexible,
-auditable proof and a deterministic E2E test would be premature, brittle, or
-too expensive. Prefer converting high-value stable agent flows to the project's
-standard E2E format later.
+Use agent tests when verification requires flexible, tool-driven judgment across
+UI, API, database, logs, files, network, or live-environment state, and when a
+deterministic test would be premature, brittle, too expensive, or too narrow.
+
+Agent tests are especially useful for:
+
+- UI changes that require visual, interactive, browser-console, network, or
+  trace verification.
+- API and DB workflows where confidence requires live requests plus persisted
+  state inspection.
+- Full-stack flows that cross frontend, backend, storage, jobs, external mocks,
+  and cleanup.
+- Exploratory regression checks before converting stable paths into standard
+  unit, contract, integration, E2E, or YAML tests.
+
+Agent tests are not a replacement for deterministic tests. Prefer converting
+high-value stable agent flows to the project's standard automated test format
+later.
 
 Before authoring an agent test, check for `tests/agent/agent-test-template.md`.
 If it exists, treat it as the authoritative local convention. Do not rediscover
