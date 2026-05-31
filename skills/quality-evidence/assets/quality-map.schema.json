@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://shiplight.dev/schemas/test-quality/quality-map.schema.json",
-  "title": "Test Quality Map",
+  "$id": "https://shiplight.dev/schemas/quality-evidence/quality-map.schema.json",
+  "title": "Quality Evidence Map",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "target", "assessment", "expectations"],

@@ -1,19 +1,21 @@
 ---
-name: test-quality
-description: Assess and improve testing quality for a project or feature by defining what should be tested, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing owner-facing test quality reports.
+name: quality-evidence
+description: Assess and improve quality evidence for a project or feature by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing owner-facing confidence reports. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
-# Test Quality
+# Quality Evidence
 
-Testing quality workflow for projects, features, modules, PRs, tickets, PRDs,
+Quality evidence workflow for projects, features, modules, PRs, tickets, PRDs,
 or user-described changes. Use when the owner wants to understand or raise
-confidence in a system through clear "testing what", clear "testing how",
-focused improvements, and an auditable pass/fail report.
+confidence in a system through clear "what must be proven", clear "how it is
+proven", focused improvements, and an auditable pass/fail report.
 
-This skill is not tied to Spec Kit. Source material can be user-provided,
-repo-local docs, PRDs, specs, issues, current implementation, git changes,
-existing tests, CI config, runtime behavior, or a silent scan of the repository.
+This skill is Speckit-aware but not Speckit-dependent. It works best when a
+Speckit spec provides the upstream truth; for brownfield projects, it can
+reconstruct provisional expectations from docs, code, tests, CI, and runtime
+behavior, then mark those expectations as `IMPLEMENTATION` or `INFERRED` until
+the user ratifies them.
 
 ## Core Model
 
@@ -25,7 +27,7 @@ Separate testing into two layers:
    integration, E2E, agent tests, manual checks, telemetry, static
    checks, smoke tests, CI, or project-specific mechanisms.
 
-Testing quality is not test count. Optimize for justified confidence per unit
+Quality evidence is not test count. Optimize for justified confidence per unit
 of cost, stability, latency, diagnostic value, and maintenance.
 
 Represent quality as an evidence graph:
@@ -61,8 +63,8 @@ routes can be joined reliably.
   `NNN-kebab-case-name`, for example `026-enterprise-rate-card`.
 - If a source folder, branch, issue, or spec already has a numeric prefix, reuse
   that exact slug. Do not drop `NNN-`.
-- If a repo has `specs/NNN-feature-name`, the quality target for that feature
-  must be `test-quality/NNN-feature-name/`.
+- If a repo has `specs/NNN-feature-name`, the default evidence target for that
+  feature is `quality-evidence/NNN-feature-name/`.
 - If no numeric source exists, choose the next unused three-digit prefix in the
   repo's feature sequence before creating the target. Record the choice in
   `quality-map.yaml`.
@@ -90,17 +92,22 @@ Do not invent requirements. Distinguish `SOURCE` expectations from
 
 Create or update these artifacts:
 
-- Feature target: `test-quality/<target-slug>/test-spec.md`
-- Feature target: `test-quality/<target-slug>/quality-map.yaml`
-- Feature target: `test-quality/<target-slug>/test-report.md`
-- Project target: `test-quality/project/test-spec.md`
-- Project target: `test-quality/project/quality-map.yaml`
-- Project target: `test-quality/project/test-report.md`
+- Feature target: `quality-evidence/<target-slug>/test-spec.md`
+- Feature target: `quality-evidence/<target-slug>/quality-map.yaml`
+- Feature target: `quality-evidence/<target-slug>/test-report.md`
+- Project target: `quality-evidence/project/test-spec.md`
+- Project target: `quality-evidence/project/quality-map.yaml`
+- Project target: `quality-evidence/project/test-report.md`
 
-If the repo has an obvious existing convention for test quality artifacts, use
-that convention only when it clearly fits, but keep the canonical target slug
-format above. Do not require `specs/`, `plan.md`, `tasks.md`, `.specify/`, or
-Spec Kit templates.
+For new projects, use `quality-evidence/`. For existing repos that already use
+the legacy `test-quality/` root, continue updating that root unless the user
+explicitly asks to migrate. Do not create parallel `quality-evidence/` and
+`test-quality/` evidence trees for the same target.
+
+If the repo has another obvious existing convention for quality evidence
+artifacts, use that convention only when it clearly fits, but keep the canonical
+target slug format above. Do not require `specs/`, `plan.md`, `tasks.md`,
+`.specify/`, or Spec Kit templates.
 
 `quality-map.yaml` is the canonical machine-readable artifact. Markdown files
 are owner-readable projections and narrative summaries. When creating a new map,
@@ -185,7 +192,7 @@ Use overall confidence:
 
 ### 2. Define Or Refresh Testing What
 
-Write `test-quality/<target>/test-spec.md` as the durable testing contract.
+Write `quality-evidence/<target>/test-spec.md` as the durable testing contract.
 Include:
 
 - Product behaviors and user workflows.
@@ -260,7 +267,7 @@ is missing, mark it `BLOCKED` or `NOT MEASURED`; do not claim it passed.
 
 ### 7. Write Or Update Quality Map
 
-Write `test-quality/<target>/quality-map.yaml` as the structured evidence
+Write `quality-evidence/<target>/quality-map.yaml` as the structured evidence
 graph. Use the bundled template for new maps:
 
 - `assets/quality-map.template.yaml`
@@ -280,7 +287,7 @@ On repeat runs:
 
 ### 8. Write Or Update Test Report
 
-Write `test-quality/<target>/test-report.md` as the current evidence snapshot.
+Write `quality-evidence/<target>/test-report.md` as the current evidence snapshot.
 Include:
 
 - Target, scope, source material, branch/commit when available, and timestamp.
@@ -337,7 +344,7 @@ proof, scaffold from the installed internal assets:
 
 - `tests/agent/agent-test-template.md`
 - `tests/agent/agent-test-suites.example.json`
-- `test-quality/run-agent-verification.ts`
+- `quality-evidence/run-agent-verification.ts`
 
 If those files have not been installed but the internal skill bundle is
 available, use the bundled sources under `files/tests/agent/`:
@@ -355,8 +362,8 @@ and cleanup ownership.
 Agent reports should use the local runner/report convention when present. Map
 the report path, final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and evidence
 artifacts such as HTML reports, screenshot sets, videos, or traces back into
-`test-quality/<target>/quality-map.yaml` and
-`test-quality/<target>/test-report.md`. Text-only browser claims are not
+`quality-evidence/<target>/quality-map.yaml` and
+`quality-evidence/<target>/test-report.md`. Text-only browser claims are not
 sufficient evidence.
 
 ## Artifact Skeletons
@@ -394,7 +401,7 @@ assessment:
   updated_at: <ISO-8601 timestamp>
   branch: <branch-or-unknown>
   commit: <git-sha-or-unknown>
-  generated_by: test-quality
+  generated_by: quality-evidence
   overall_status: UNKNOWN
   overall_confidence: UNKNOWN
 expectations:
@@ -452,8 +459,9 @@ use `assets/quality-map.schema.json`.
 
 ## Operating Rules
 
-- This skill may edit tests, test fixtures, test scripts, `test-quality/**`,
-  and project-standard test evidence folders.
+- This skill may edit tests, test fixtures, test scripts,
+  `quality-evidence/**`, legacy `test-quality/**`, and project-standard test
+  evidence folders.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
   enums, and avoid free-form dialects when a field already exists.
@@ -467,6 +475,6 @@ use `assets/quality-map.schema.json`.
 
 ## When Not To Use
 
-- When the user only wants a code review with no testing-quality assessment.
+- When the user only wants a code review with no evidence-quality assessment.
 - When implementation does not exist and the user only wants product planning.
 - When the user wants only a narrow command run and no quality mapping.

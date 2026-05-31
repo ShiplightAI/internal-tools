@@ -13,7 +13,7 @@ assessment:
   updated_at: "<ISO-8601 timestamp>"
   branch: "<branch-or-unknown>"
   commit: "<git-sha-or-unknown>"
-  generated_by: "test-quality"
+  generated_by: "quality-evidence"
   overall_status: "UNKNOWN" # PASS | FAIL | PARTIAL | BLOCKED | NOT RUN | DEFERRED | ABORTED | UNKNOWN
   overall_confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
 

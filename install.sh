@@ -15,6 +15,11 @@ AGENT_TEST_TEMPLATE_PATH="files/tests/agent/agent-test-template.md"
 AGENT_TEST_RUNNER_PATH="files/tests/agent/run-agent-verification.ts"
 AGENT_TEST_SUITES_EXAMPLE_PATH="files/tests/agent/agent-test-suites.example.json"
 AGENT_TEST_README_PATH="files/tests/agent/README.md"
+QUALITY_EVIDENCE_ROOT="${QUALITY_EVIDENCE_ROOT:-quality-evidence}"
+
+if [[ -d "test-quality" && ! -d "quality-evidence" && "${QUALITY_EVIDENCE_ROOT}" == "quality-evidence" ]]; then
+  QUALITY_EVIDENCE_ROOT="test-quality"
+fi
 
 usage() {
   cat <<'EOF'
@@ -28,18 +33,22 @@ Examples:
   ./install.sh -a claude-code -y
   ./install.sh --all
   ./install.sh -g -a codex -y
-  ./install.sh --skill auto-pr --skill test-quality -a codex -y
+  ./install.sh --skill auto-pr --skill quality-evidence -a codex -y
 
 All arguments are passed through to:
   npx -y skills add git@github.com:ShiplightAI/internal-agent-skills.git
 
 The installer also writes:
-  test-quality/test-spec-template.md
-  test-quality/test-report-template.md
-  test-quality/run-agent-verification.ts
+  quality-evidence/test-spec-template.md
+  quality-evidence/test-report-template.md
+  quality-evidence/run-agent-verification.ts
   tests/agent/agent-test-template.md
   tests/agent/agent-test-suites.example.json
   tests/agent/README.md
+
+The quality-evidence skill replaces the earlier test-quality skill name. Repos
+that already use test-quality/ artifacts can keep them until they intentionally
+migrate. Set QUALITY_EVIDENCE_ROOT to override the installed asset directory.
 EOF
 }
 
@@ -89,9 +98,9 @@ fetch_asset() {
   fi
 }
 
-fetch_asset "$TEST_SPEC_TEMPLATE_PATH" "test-quality/test-spec-template.md"
-fetch_asset "$TEST_REPORT_TEMPLATE_PATH" "test-quality/test-report-template.md"
-fetch_asset "$AGENT_TEST_RUNNER_PATH" "test-quality/run-agent-verification.ts"
+fetch_asset "$TEST_SPEC_TEMPLATE_PATH" "${QUALITY_EVIDENCE_ROOT}/test-spec-template.md"
+fetch_asset "$TEST_REPORT_TEMPLATE_PATH" "${QUALITY_EVIDENCE_ROOT}/test-report-template.md"
+fetch_asset "$AGENT_TEST_RUNNER_PATH" "${QUALITY_EVIDENCE_ROOT}/run-agent-verification.ts"
 fetch_asset "$AGENT_TEST_TEMPLATE_PATH" "tests/agent/agent-test-template.md"
 fetch_asset "$AGENT_TEST_SUITES_EXAMPLE_PATH" "tests/agent/agent-test-suites.example.json"
 fetch_asset "$AGENT_TEST_README_PATH" "tests/agent/README.md"

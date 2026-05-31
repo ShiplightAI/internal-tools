@@ -10,7 +10,7 @@ The shared installer can scaffold these files into a workspace:
 
 - `tests/agent/agent-test-template.md`: case authoring template
 - `tests/agent/agent-test-suites.example.json`: manifest example
-- `test-quality/run-agent-verification.ts`: local runner/orchestrator
+- `quality-evidence/run-agent-verification.ts`: local runner/orchestrator
 
 Each project owns its real `tests/agent/agent-test-suites.json`, case files,
 fixtures, secrets, session bootstrap, CI wiring, and mutation policy.
@@ -22,10 +22,13 @@ Add a package script in the target repo, adjusted for its package manager:
 ```json
 {
   "scripts": {
-    "agent:verify": "tsx test-quality/run-agent-verification.ts"
+    "agent:verify": "tsx quality-evidence/run-agent-verification.ts"
   }
 }
 ```
+
+If the repo already uses the legacy `test-quality/` root and the installer put
+the runner there, use `tsx test-quality/run-agent-verification.ts` instead.
 
 Create a real manifest from the example:
 
