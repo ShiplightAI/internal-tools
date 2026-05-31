@@ -17,18 +17,17 @@ instead of duplicating them.
 
 ## Prerequisites
 
-Before using this skill to initialize, reconstruct, or drive a project, verify
-that the project and current agent have these foundations:
+Before using this skill to create project artifacts, reconstruct behavior, or
+drive a project, verify that the project and current agent have these
+foundations:
 
-1. **Spec Kit installed and initialized**
+1. **Spec Kit installed and bootstrapped**
    - The `specify` CLI is installed.
-   - The target repo has been initialized with `specify init` for the current
+   - The target repo has already run the `specify init` command for the current
      coding agent. For Codex skills mode, use the Spec Kit Codex integration
      with skills enabled.
-   - Speckit commands or skills are available for the active agent, including
-     `speckit-constitution`, `speckit-specify`, `speckit-clarify`,
-     `speckit-plan`, `speckit-tasks`, `speckit-analyze`, and
-     `speckit-implement`.
+   - Speckit commands or skills from `specify init` are available for the active
+     agent.
    - Reference: https://github.com/github/spec-kit/blob/main/README.md
 
 2. **Shiplight MCP and skills installed**
@@ -38,7 +37,23 @@ that the project and current agent have these foundations:
    - Reference: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
 
 If either prerequisite is missing, stop project orchestration and help the user
-install or initialize the missing foundation before running the project workflow.
+install or run the missing setup command before running the project workflow.
+
+## Default Invocation
+
+When the user invokes this skill without a more specific request, run a
+non-mutating project status pass:
+
+1. Verify prerequisites are present.
+2. Read the current Speckit pointer, branch, project map if present, active
+   feature spec/plan/tasks, and recent evidence/review artifacts.
+3. Report current mode, active feature, branch, phase, artifacts found, drift or
+   traceability gaps, and the next gate.
+4. Do not create files, switch branches, edit pointers, or run long validation
+   suites unless the user asks for that next step.
+
+Treat the status pass as orientation. If a project map is missing, stale, or
+inconsistent, report the exact gap and recommend the smallest follow-up action.
 
 ## Backbone
 
@@ -109,6 +124,10 @@ Read `references/project-map.md` before creating or significantly changing a
 project map. Read `references/brownfield-reconstruction.md` before deriving
 features from an existing non-Speckit codebase.
 
+`assets/project-map.template.yaml` is the single source of truth for project map
+shape. When a map is missing, stale, or needs repair, read `references/project-map.md`
+and use `assets/project-map.template.yaml` directly.
+
 ## Source Types
 
 Use source types consistently in project maps, specs, and reports:
@@ -126,7 +145,10 @@ clear user decision or accepted project document.
 
 ### 1. Project Initialization
 
-Use when starting a new product or adding Speckit discipline to a repo.
+Use after `specify init` when starting a new product or adding project-level
+Speckit discipline to a repo. This mode creates or refines artifacts such as the
+PRD, feature breakdown, and project map; it does not replace the Spec Kit
+`specify init` command.
 
 1. Read `README*`, existing docs, package metadata, current Speckit files, and
    any user-provided product notes.
@@ -168,12 +190,23 @@ Use when switching from one feature to another or resuming work.
    - `.specify/feature.json`
    - `AGENTS.md` Speckit pointer, if present
    - `project-map.yaml` or `.specify/project-map.yaml` `active_feature`
-4. If the feature does not exist, use `speckit-git-feature` and
-   `speckit-specify` as appropriate.
+4. If the feature does not exist, use the initialized Spec Kit feature creation
+   flow as appropriate.
 5. Report the active feature, branch, phase, and next expected command.
 
 `active_feature` is a working pointer. Durable roadmap status belongs on the
 feature entry in the project map.
+
+If the selected feature appears implemented, verified, reviewed, merged, or on
+`main`, do not assume the active pointer is wrong. Report the state and choose
+one of these next gates:
+
+- `done`: mark the feature status complete only when acceptance/evidence is
+  current and no blocking drift remains.
+- `release`: keep the feature active while release or rollout verification is
+  still pending.
+- `select-next`: ask for or select the next feature only after the current
+  feature has an explicit durable status in the project map.
 
 ### 4. Feature Lifecycle Driver
 
@@ -203,7 +236,7 @@ speckit-implement
 ```
 
 The orchestrator should update the project map after major transitions:
-`planned`, `specified`, `planned_for_implementation`, `implemented`,
+`planned`, `specified`, `designed`, `tasked`, `implementing`, `implemented`,
 `verified`, `reviewed`, `done`, `blocked`, or `deferred`.
 
 ### 5. Batch Planning Mode
@@ -253,6 +286,21 @@ Keep the map useful for humans, agents, and web UIs:
 - Mark inferred and legacy facts honestly.
 - Surface orphan code, specs without implementation, implementation not in spec,
   evidence gaps, stale reports, and cross-feature drift.
+
+Mutation boundaries:
+
+- Status pass: read-only unless the user explicitly asks to fix artifacts.
+- Project initialization, roadmap breakdown, brownfield reconstruction, and
+  requested map maintenance: create or edit PRD, roadmap, and project map as
+  needed.
+- Active feature selection: update `.specify/feature.json`, AGENTS pointers, and
+  project-map `active_feature` only when the target feature is clear. Do not
+  switch git branches if there are uncommitted changes that could be stranded;
+  report the conflict instead.
+- Feature lifecycle execution: update specs before code when accepted behavior
+  changes, then update plan/tasks/code/tests/evidence to match.
+- Branch, release, PR, and merge operations require an explicit user request or
+  the `auto-pr` workflow.
 
 ## Drift Resolution
 
