@@ -154,7 +154,7 @@ PRD, feature breakdown, and project map; it does not replace the Spec Kit
    any user-provided product notes.
 2. Create or refine `docs/prd.md`.
 3. Create `docs/feature-breakdown.md` with numbered features, dependencies,
-   MVP/release boundaries, and quality focus.
+   MVP/release areas, and quality focus.
 4. Create `.specify/project-map.yaml` or `project-map.yaml`.
 5. Verify the project constitution establishes specification authority:
    - specs are source of truth
@@ -175,7 +175,7 @@ Use when converting a PRD into executable feature slices.
 2. Split features so each can be specified, implemented, and verified
    independently.
 3. Assign stable three-digit IDs (`001-*`, `002-*`) and explicit dependencies.
-4. Keep MVP/release boundaries visible.
+4. Keep MVP/release areas visible.
 5. Update the project map so the web UI can connect PRD, roadmap, specs, code,
    evidence, and status.
 
@@ -280,6 +280,10 @@ Keep the map useful for humans, agents, and web UIs:
 
 - Record feature IDs, names, statuses, dependencies, source refs, spec paths,
   code refs, evidence refs, and residual risks.
+- Use `roadmap.release_areas` for PM-facing release areas: logical groups of
+  feature IDs that should be judged together for readiness. They are not
+  filesystem directories, feature scopes, git branches, or deployment gates
+  unless the project explicitly says so.
 - Use stable IDs. Do not renumber existing features without explicit approval.
 - Prefer concise source refs over dumping full requirements into the map.
 - Keep `active_feature` aligned with branch and Speckit pointers.

@@ -60,11 +60,21 @@ Important fields:
 
 - `project`: identity and source docs.
 - `product_docs`: PRD, roadmap, architecture docs, release notes.
-- `roadmap`: milestones and feature order.
+- `roadmap`: milestones, release areas, and feature order.
 - `active_feature`: current working pointer.
 - `features`: numbered feature graph.
 - `cross_feature_concerns`: shared risks, constraints, and architecture seams.
 - `discovery`: brownfield inference metadata, if applicable.
+
+## Release Areas
+
+Use `roadmap.release_areas` for PM-facing groups of feature IDs that should be
+judged together for readiness. Name areas in terms a PM would recognize. Do not
+group by filesystem path, branch name, implementation owner, or deployment gate
+unless the product roadmap explicitly uses that grouping.
+
+Each release area should include a stable `id`, a readable `name`,
+`feature_ids`, and `exit_criteria`.
 
 ## Feature Entry Semantics
 
@@ -93,7 +103,7 @@ Recommended feature status values:
 - `implemented`: code complete for accepted scope.
 - `verified`: tests/verification complete enough for review.
 - `reviewed`: code review completed with no critical/high blockers.
-- `done`: feature accepted for the current release boundary.
+- `done`: feature accepted for the current release area.
 - `blocked`: cannot progress without user or external state.
 - `deferred`: intentionally postponed.
 - `deprecated`: obsolete and retained only for history.

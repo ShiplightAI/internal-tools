@@ -1,12 +1,12 @@
 ---
 name: code-review-run
-description: Run a thorough, max-effort local code review (the /code-review skill) and optionally save a ranked report; supports multi-round reviews that reconcile prior findings.
+description: Run a medium-effort local code review (the /code-review skill) and optionally save a ranked report; supports multi-round reviews that reconcile prior findings.
 user_invocable: true
 ---
 
 # Code Review Run
 
-Run a thorough correctness review of a change and (optionally) save a ranked report file.
+Run a correctness review of a change and (optionally) save a ranked report file.
 
 This is for **standalone** reviews — reviewing local changes, a feature area, or a commit range outside the PR flow. For the full PR lifecycle (create PR → pre-review → Claude bot review → merge), use the `auto-pr` skill instead.
 
@@ -18,7 +18,7 @@ Before running a local or headless review, check `claude --version`. It must be 
 
 This wraps the `/code-review` skill, which scans the diff for correctness bugs at a chosen effort level.
 
-- Effort: `low` | `medium` | `high` | `max`. Use `max` for thorough, recall-oriented passes (more finder angles + verification + a gap sweep).
+- Effort: `low` | `medium` | `high` | `max`. Default to `medium`; use `max` only when the user explicitly asks for the most thorough, recall-oriented pass (more finder angles + verification + a gap sweep).
 - It returns findings as a ranked list and only writes a file if you ask it to.
 - Disambiguation: `/code-review` (effort-based, reviews the current diff) is a **different** skill from `code-review:code-review` (a plugin that reviews a PR by number, used by `auto-pr`). This skill uses the effort-based `/code-review`.
 
@@ -28,7 +28,7 @@ This wraps the `/code-review` skill, which scans the diff for correctness bugs a
 Invoke the skill directly with effort + scope:
 
 ```
-/code-review max <scope>
+/code-review medium <scope>
 ```
 
 With no scope it reviews the current branch diff. To save a report, also tell it the path (see "Saving a report").
@@ -37,18 +37,18 @@ With no scope it reviews the current branch diff. To save a report, also tell it
 One self-contained command:
 
 ```bash
-claude -p "/code-review max <scope>. Write the findings to \
+claude -p "/code-review medium <scope>. Write the findings to \
 code-reviews/<feature-slug>/code-review-$(date +%F)-round-1.md as a ranked markdown \
 report: severity, file:line, the bug, a concrete failure scenario, and a fix \
 direction. Add a 'verified-and-cleared' section." \
-  --effort max --model opus --permission-mode bypassPermissions \
+  --effort medium --model opus --permission-mode bypassPermissions \
   --output-format stream-json --include-partial-messages --verbose
 ```
 
 - `<scope>`: a feature/dir, a set of files, or a commit range. Omit to review the current branch diff. `<scope>` becomes one shell arg — keep it in a single quoted string; `$(...)` expands in your shell first (handy for dates).
 - `--permission-mode bypassPermissions` is required for unattended runs (the review uses Bash/git, spawns subagents, and writes the report) — use only in a repo you trust, or scope access with `--allowedTools`.
 - `--output-format stream-json --include-partial-messages --verbose` is the default for headless runs so long reviews emit realtime JSON events and partial assistant chunks before any external timeout. It only works with `--print` / `-p`. If logs are too noisy, drop `--include-partial-messages`.
-- Optional: `--max-budget-usd <n>` (spend cap), and `--comment` inside the skill args (`/code-review max <scope> --comment`) to post inline PR comments instead of writing a file.
+- Optional: `--max-budget-usd <n>` (spend cap), and `--comment` inside the skill args (`/code-review medium <scope> --comment`) to post inline PR comments instead of writing a file.
 
 ## Saving a report
 
@@ -66,10 +66,10 @@ The skill writes a file only when the prompt asks for it. Default convention:
 
 By default, this skill is an active review-and-remediation loop, not a report-only pass. Unless the user explicitly asks for review-only output:
 
-1. Run `/code-review max <scope>` on the current diff.
+1. Run `/code-review medium <scope>` on the current diff.
 2. Address every blocking finding labeled **BUG**, **CRITICAL**, or **🔴**. Keep fixes within the requested scope.
 3. Run the relevant targeted verification for the fixes.
-4. Run a fresh `/code-review max <scope>` again on the updated diff.
+4. Run a fresh `/code-review medium <scope>` again on the updated diff.
 5. Repeat this review -> fix -> verify -> fresh review loop until the latest review has no **BUG**, **CRITICAL**, or **🔴** findings.
 
 Treat non-blocking **MINOR**, **NIT**, **SUGGESTION**, and **LOGIC LOOKS CORRECT** items as optional; fix them only when the fix is cheap and low-risk. Do not stop after the first review if blocking findings remain. Stop only when blockers are gone, the user asked for review-only output, or a blocking finding cannot be resolved safely; in that case, explain the blocker clearly.

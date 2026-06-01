@@ -23,8 +23,8 @@ product_docs:
 
 roadmap:
   current_milestone: "MVP"
-  release_boundaries:
-    - id: "MVP"
+  release_areas:
+    - id: "mvp"
       name: "Minimum viable product"
       feature_ids: []
       exit_criteria: []
