@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+generator="${script_dir}/generate-fix-prompts"
+repo_dir="$(mktemp -d)"
+work_dir="$(mktemp -d)"
+
+cleanup() {
+  rm -rf "$repo_dir" "$work_dir"
+}
+trap cleanup EXIT
+
+mkdir -p "${repo_dir}/quality-evidence/001-fixture"
+
+cat > "${repo_dir}/quality-evidence/001-fixture/quality-map.yaml" <<'YAML'
+schema_version: 1
+target:
+  id: 001-fixture
+  name: Fixture Feature
+  scope: feature
+  source_refs:
+    - path: specs/001-fixture/spec.md
+assessment:
+  updated_at: 2026-06-01T00:00:00Z
+  branch: main
+  commit: abc123
+  generated_by: quality-evidence
+  overall_status: PARTIAL
+  overall_confidence: HIGH
+expectations:
+  - id: covered-context
+    title: Covered context should not become a prompt
+    source_type: SOURCE
+    category: other
+    priority: P0
+    risk:
+      weight: 5
+      rationale: Important but already covered.
+    evidence:
+      - id: covered-context-test
+        type: integration
+        path: tests/covered-context.test.ts
+        command: pnpm test tests/covered-context.test.ts
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: Current automated evidence covers the core local behavior; remaining browser, live, provider, telemetry, or scale gaps are tracked in the browser/live expectation.
+      next_best_proof: null
+  - id: skipped-result
+    title: Skipped result is not current pass evidence
+    source_type: SOURCE
+    category: other
+    priority: P1
+    risk:
+      weight: 4
+      rationale: Skipped checks leave the behavior unproven.
+    evidence:
+      - id: skipped-result-test
+        type: integration
+        path: tests/skipped-result.test.ts
+        command: pnpm test tests/skipped-result.test.ts
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: SKIPPED
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: ""
+      next_best_proof: null
+  - id: sentinel-command
+    title: Missing artifact sentinel is not a runnable check
+    source_type: SOURCE
+    category: ops
+    priority: P2
+    risk:
+      weight: 3
+      rationale: Missing evidence should be closed with an artifact.
+    evidence:
+      - id: sentinel-command-evidence
+        type: other
+        path: ""
+        command: No evidence artifact found
+        depth: MISSING
+        ci_gated: false
+        reliability: UNKNOWN
+        latest_result:
+          status: NOT RUN
+      - id: linked-runbook-evidence
+        type: manual
+        path: tests/agent/001-fixture/manual-check.md
+        command: see linked artifact or runbook
+        depth: MANUAL
+        ci_gated: false
+        reliability: MODERATE
+        latest_result:
+          status: NOT RUN
+    evaluation:
+      coverage_status: DEFERRED
+      confidence: LOW
+      breadth: MISSING
+      depth: MISSING
+      freshness: UNKNOWN
+      weighted_confidence: LOW
+      residual_risk: The current evidence artifact is not attached.
+      next_best_proof: Attach or rerun the agent verification artifact.
+  - id: next-proof
+    title: Explicit next proof is actionable
+    source_type: SOURCE
+    category: ui
+    priority: P1
+    risk:
+      weight: 2
+      rationale: Browser proof is useful before release.
+    evidence:
+      - id: next-proof-test
+        type: integration
+        path: tests/next-proof.test.ts
+        command: pnpm test / pnpm typecheck
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: Browser-only behavior is still worth checking before release.
+      next_best_proof: Run the browser verification suite.
+  - id: map-generation-note
+    title: Quality map generation is an evidence note
+    source_type: SOURCE
+    category: other
+    priority: P2
+    risk:
+      weight: 2
+      rationale: Generated maps must tell agents what to rerun.
+    evidence:
+      - id: map-generation-evidence
+        type: static
+        path: quality-evidence/001-fixture/quality-map.yaml
+        command: quality-evidence map generation
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: PARTIAL
+      confidence: MEDIUM
+      breadth: MODERATE
+      depth: MODERATE
+      freshness: FRESH
+      weighted_confidence: MEDIUM
+      residual_risk: Project rollup still depends on a feature-level gap.
+      next_best_proof: null
+gap_summary:
+  release_blockers: []
+  high_risk_gaps: []
+  stale_or_flaky_evidence: []
+  deferred_items: []
+YAML
+
+json_output="$("$generator" "$repo_dir" --format json)"
+
+node - "$json_output" <<'JS'
+const records = JSON.parse(process.argv[2]);
+const ids = records.map((record) => record.expectation_id);
+
+function assert(condition, message) {
+  if (!condition) {
+    console.error(message);
+    process.exit(1);
+  }
+}
+
+assert(!ids.includes("covered-context"), "covered/high residual context should not generate a prompt");
+assert(ids.includes("skipped-result"), "SKIPPED latest_result should generate a prompt");
+assert(ids.includes("sentinel-command"), "missing evidence should generate a prompt");
+assert(ids.includes("next-proof"), "explicit next_best_proof should generate a prompt");
+
+const sentinel = records.find((record) => record.expectation_id === "sentinel-command");
+assert(sentinel !== undefined, "sentinel fixture record was not found");
+assert(!sentinel.verification_checks.includes("No evidence artifact found"), "missing-artifact sentinel should not be a rerunnable check");
+assert(!sentinel.verification_checks.includes("see linked artifact or runbook"), "runbook sentinel should not be a rerunnable check");
+assert(sentinel.verification_checks.includes("tests/agent/001-fixture/manual-check.md"), "agent test path should remain a verification check");
+assert(sentinel.evidence_notes.includes("No evidence artifact found"), "missing-artifact sentinel should be preserved as an evidence note");
+assert(sentinel.evidence_notes.includes("see linked artifact or runbook"), "runbook sentinel should be preserved as an evidence note");
+
+const nextProof = records.find((record) => record.expectation_id === "next-proof");
+assert(nextProof !== undefined, "next proof fixture record was not found");
+assert(nextProof.verification_checks.includes("pnpm test"), "slash-separated command shorthand should include pnpm test");
+assert(nextProof.verification_checks.includes("pnpm typecheck"), "slash-separated command shorthand should include pnpm typecheck");
+assert(!nextProof.verification_checks.includes("pnpm test / pnpm typecheck"), "slash-separated command shorthand should not remain a single check");
+
+const mapGeneration = records.find((record) => record.expectation_id === "map-generation-note");
+assert(mapGeneration !== undefined, "map-generation fixture record was not found");
+assert(!mapGeneration.verification_checks.includes("quality-evidence map generation"), "map generation should not be a rerunnable check");
+assert(mapGeneration.evidence_notes.includes("quality-evidence map generation"), "map generation should be preserved as an evidence note");
+JS
+
+(
+  cd "$work_dir"
+  "$generator" "$repo_dir" --limit 1 --output quality-evidence/fix-prompts.md
+)
+
+if [[ ! -f "${repo_dir}/quality-evidence/fix-prompts.md" ]]; then
+  echo "relative --output should write under the repo root" >&2
+  exit 1
+fi
+
+if [[ -f "${work_dir}/quality-evidence/fix-prompts.md" ]]; then
+  echo "relative --output must not write under the caller cwd" >&2
+  exit 1
+fi
+
+echo "generate-fix-prompts regression tests passed"

@@ -136,6 +136,43 @@ Use the map for agent handoff, UI visualization, release gates, trend analysis,
 and gap prioritization. Preserve the input fields behind any confidence
 judgment so scoring formulas can evolve without losing the audit trail.
 
+## Generate Fix Prompts
+
+Invocation shortcut: `fix-prompts`.
+
+When the user says `quality-evidence fix-prompts`, interpret it as this workflow.
+Accept script-style options after the shortcut, for example:
+
+```text
+quality-evidence fix-prompts --target 001-platform-foundation --limit 10
+```
+
+When the user wants coding agents to fix many readiness risks, do not require
+manual copy/paste from a dashboard. Generate prompts directly from the repo's
+quality maps with the bundled script:
+
+```bash
+<skill-dir>/scripts/generate-fix-prompts <repo-root> \
+  --output quality-evidence/fix-prompts.md
+```
+
+Useful options:
+
+- `--format json` for automation.
+- `--target <target-id>` for one feature or project target.
+- `--limit <n>` for the highest-priority prompts only.
+- `--include-covered` when auditing every expectation, not just risks.
+
+Relative `--output` paths are resolved under `<repo-root>`.
+
+The script scans `quality-evidence/**/quality-map.yaml` and
+`test-quality/**/quality-map.yaml`. It uses quality-map target ids and names for
+affected feature/spec identity; do not infer feature ownership from test file
+names. Each prompt separates source-of-truth inputs from verification checks so
+the fixing agent knows what to read versus what to run. The bundled helper is
+TypeScript plus a bash launcher only; do not introduce Python or another language
+for this workflow.
+
 ## Evidence Categories
 
 Keep categories distinct in `quality-map.yaml` and the Markdown report:

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_ts="${script_dir}/generate-fix-prompts.ts"
+
+if command -v node >/dev/null 2>&1; then
+  node_args=(--experimental-strip-types)
+  if node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON -e '' >/dev/null 2>&1; then
+    node_args=(--disable-warning=MODULE_TYPELESS_PACKAGE_JSON "${node_args[@]}")
+  fi
+  if node "${node_args[@]}" -e 'const value: number = 1; process.exit(value === 1 ? 0 : 1)' >/dev/null 2>&1; then
+    exec node "${node_args[@]}" "$script_ts" "$@"
+  fi
+fi
+
+if command -v tsx >/dev/null 2>&1; then
+  exec tsx "$script_ts" "$@"
+fi
+
+if command -v pnpm >/dev/null 2>&1 && pnpm exec tsx --version >/dev/null 2>&1; then
+  exec pnpm exec tsx "$script_ts" "$@"
+fi
+
+if command -v npx >/dev/null 2>&1 && npx --no-install tsx --version >/dev/null 2>&1; then
+  exec npx --no-install tsx "$script_ts" "$@"
+fi
+
+cat >&2 <<'EOF'
+Cannot run generate-fix-prompts.ts.
+
+Install or use one of:
+- Node with --experimental-strip-types support
+- tsx on PATH
+- pnpm exec tsx
+- npx --no-install tsx
+EOF
+exit 1
