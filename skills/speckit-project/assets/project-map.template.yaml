@@ -3,6 +3,7 @@ schema_version: 1
 project:
   id: "<project-slug>"
   name: "<Project Name>"
+  summary: "<Product-language project summary>"
   source_refs:
     - path: "README.md"
       label: "Project README"
@@ -26,6 +27,7 @@ roadmap:
   release_areas:
     - id: "mvp"
       name: "Minimum viable product"
+      description: "<Product capability, workflow, or outcome this release area covers>"
       feature_ids: []
       exit_criteria: []
   feature_order: []
@@ -40,10 +42,10 @@ active_feature:
 features:
   - id: "001-example-feature"
     name: "Example Feature"
+    description: "<Product-language feature promise or workflow>"
     status: "candidate"
     priority: "P1"
     source_type: "INFERRED"
-    confidence: "LOW"
     dependencies: []
     implements_prd_refs:
       - path: "docs/prd.md"
@@ -66,7 +68,7 @@ cross_feature_concerns:
     status: "open"
     feature_ids: []
     source_refs: []
-    notes: null
+    notes: "<Product-language concern summary>"
 
 discovery:
   mode: "greenfield"

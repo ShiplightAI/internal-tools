@@ -2,8 +2,8 @@ schema_version: 1
 
 target:
   id: "001-example-feature"
-  name: "<Human-readable target name>"
-  scope: "feature" # feature | project | module | pr | ticket
+  name: "<Display target name>"
+  scope: "feature" # feature | module | pr | ticket
   aliases: [] # Legacy or alternate slugs, for example ["enterprise-rate-card"].
   source_refs:
     - path: "<path/to/spec-or-prd.md>"
@@ -32,7 +32,7 @@ scoring_model:
 expectations:
   - id: "<stable-expectation-id>"
     title: "<Behavior, invariant, workflow, or operational promise>"
-    description: "<Short owner-readable expectation>"
+    description: "<Short product-language quality check>"
     source_type: "SOURCE" # SOURCE | IMPLEMENTATION | INFERRED
     source_refs:
       - path: "<path/to/source.md>"

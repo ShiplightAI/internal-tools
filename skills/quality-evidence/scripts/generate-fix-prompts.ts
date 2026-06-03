@@ -55,8 +55,7 @@ const EMPTY_TEXT = new Set(["", "none", "n/a", "na", "null", "unavailable", "unk
 const NON_RUNNABLE_COMMANDS = new Set([
   "no evidence artifact found",
   "see linked artifact or runbook",
-  "quality-evidence map generation",
-  "quality-evidence project rollup aggregation"
+  "quality-evidence map generation"
 ]);
 
 function scalar(value: JsonValue | undefined): string {
@@ -676,13 +675,10 @@ function recommendedActionText(expectation: JsonObject): string {
 function scopeLine(target: JsonObject): readonly [string, string] {
   const targetId = scalar(target.id);
   const targetName = scalar(target.name) || targetId || "unknown target";
-  if (scalar(target.scope).toLowerCase() === "project") {
-    return ["Verification scope", `${targetName} project-level verification`];
-  }
   if (targetId.length > 0 && targetId !== targetName) {
-    return ["Affected feature spec", `${targetId} - ${targetName}`];
+    return ["Affected feature", `${targetId} - ${targetName}`];
   }
-  return ["Affected feature spec", targetName];
+  return ["Affected feature", targetName];
 }
 
 function priorityRank(priority: string): number {

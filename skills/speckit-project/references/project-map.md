@@ -5,6 +5,13 @@ feature specs, implementation artifacts, and evidence. It is an index and
 traceability artifact, not a replacement for PRDs, specs, tasks, code, or
 quality maps.
 
+Write the map as a product-language summary first and a traceability graph
+second. Names, summaries, release area descriptions, feature descriptions, and
+concern notes should explain capabilities, workflows, outcomes, and quality
+state without requiring knowledge of repository layout. Put technical details in
+source refs, artifact paths, code refs, evidence refs, source types, statuses,
+and discovery fields.
+
 ## Location
 
 Preferred locations:
@@ -58,30 +65,32 @@ project-specific fields only when they have a clear consumer.
 
 Important fields:
 
-- `project`: identity and source docs.
+- `project`: identity, source docs, and product-language summary.
 - `product_docs`: PRD, roadmap, architecture docs, release notes.
 - `roadmap`: milestones, release areas, and feature order.
 - `active_feature`: current working pointer.
-- `features`: numbered feature graph.
+- `features`: numbered feature graph with product-language feature descriptions.
 - `cross_feature_concerns`: shared risks, constraints, and architecture seams.
 - `discovery`: brownfield inference metadata, if applicable.
 
 ## Release Areas
 
-Use `roadmap.release_areas` for PM-facing groups of feature IDs that should be
-judged together for readiness. Name areas in terms a PM would recognize. Do not
-group by filesystem path, branch name, implementation owner, or deployment gate
-unless the product roadmap explicitly uses that grouping.
+Use `roadmap.release_areas` for product-language groups of feature IDs that
+should be judged together for readiness. Name areas by product capability,
+workflow, or release outcome. Do not group by filesystem path, branch name,
+implementation owner, or deployment gate unless the product roadmap explicitly
+uses that grouping.
 
 Each release area should include a stable `id`, a readable `name`,
-`feature_ids`, and `exit_criteria`.
+`description`, `feature_ids`, and `exit_criteria`.
 
 ## Feature Entry Semantics
 
 Each feature should include:
 
 - stable `id`, `name`, `status`, and `priority`
-- `source_type` and `confidence`
+- `description` explaining the feature promise or workflow in product language
+- `source_type`
 - `dependencies`
 - links to PRD/roadmap/spec/plan/tasks/checklists
 - code references owned or primarily touched by the feature
@@ -120,16 +129,6 @@ Recommended active feature phases:
 - `quality-evidence`
 - `code-review`
 - `release`
-
-## Confidence Values
-
-Use confidence to avoid overclaiming:
-
-- `HIGH`: directly supported by explicit source docs or user decisions.
-- `MEDIUM`: supported by strong implementation/test evidence but not yet
-  directly ratified.
-- `LOW`: weakly inferred from partial docs, filenames, or behavior.
-- `UNKNOWN`: not enough evidence to judge.
 
 ## Source Types
 

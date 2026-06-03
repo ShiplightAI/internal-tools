@@ -14,7 +14,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "name": { "type": "string", "minLength": 1 },
-        "scope": { "enum": ["feature", "project", "module", "pr", "ticket"] },
+        "scope": { "enum": ["feature", "module", "pr", "ticket"] },
         "aliases": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }

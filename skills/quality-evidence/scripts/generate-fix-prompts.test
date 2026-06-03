@@ -11,7 +11,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "${repo_dir}/quality-evidence/001-fixture" "${repo_dir}/quality-evidence/project"
+mkdir -p "${repo_dir}/quality-evidence/001-fixture"
 
 cat > "${repo_dir}/quality-evidence/001-fixture/quality-map.yaml" <<'YAML'
 schema_version: 1
@@ -28,6 +28,10 @@ assessment:
   generated_by: quality-evidence
   overall_status: PARTIAL
   overall_confidence: HIGH
+scoring_model:
+  formula: Feature score aggregates the per-expectation weighted confidence; a
+    failing or stale check lowers the displayed confidence and can set
+    overall_status to FAIL.
 expectations:
   - id: covered-context
     title: Covered context should not become a prompt
@@ -198,89 +202,13 @@ expectations:
       depth: MODERATE
       freshness: FRESH
       weighted_confidence: MEDIUM
-      residual_risk: Project rollup still depends on a feature-level gap.
+      residual_risk: Generated map still depends on a feature-level gap.
       next_best_proof: null
 gap_summary:
   release_blockers: []
   high_risk_gaps: []
   stale_or_flaky_evidence: []
   deferred_items: []
-YAML
-
-cat > "${repo_dir}/quality-evidence/project/quality-map.yaml" <<'YAML'
-schema_version: 1
-target:
-  id: project
-  name: Fixture Project Rollup
-  scope: project
-  source_refs:
-    - path: .specify/project-map.yaml
-assessment:
-  updated_at: 2026-06-01T00:00:00Z
-  branch: main
-  commit: abc123
-  generated_by: quality-evidence
-  overall_status: PARTIAL
-  overall_confidence: MEDIUM
-scoring_model:
-  formula: Project feature scores are averaged from per-feature maps; current
-    failing verification lowers the displayed confidence score and sets
-    overall_status to FAIL.
-expectations:
-  - id: project-current-verification-maintenance
-    title: Current repo verification commands pass
-    source_type: IMPLEMENTATION
-    category: ops
-    priority: P0
-    risk:
-      weight: 5
-      rationale: Passing project verification should not be emitted as fix work.
-    evidence:
-      - id: project-pnpm-test
-        type: script
-        path: package.json
-        command: pnpm test
-        depth: DIRECT
-        ci_gated: true
-        reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: No current local P0 verification blocker remains.
-      next_best_proof: Keep pnpm test in CI/release gates.
-  - id: project-rollup-risk
-    title: Project rollup carries feature residual risk
-    source_type: SOURCE
-    category: ops
-    priority: P0
-    risk:
-      weight: 5
-      rationale: Release-critical project risk should be visible to agents.
-    evidence:
-      - id: project-rollup-quality-map
-        type: static
-        path: quality-evidence/001-fixture/quality-map.yaml
-        command: quality-evidence project rollup aggregation
-        depth: DIRECT
-        ci_gated: false
-        reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: Browser/live/provider telemetry remains deferred.
-      next_best_proof: Capture current browser evidence for the rolled-up feature.
 YAML
 
 json_output="$("$generator" "$repo_dir" --format json)"
@@ -300,11 +228,11 @@ function assert(condition, message) {
 
 assert(!ids.includes("covered-context"), "covered/high residual context should not generate a prompt");
 assert(!ids.includes("covered-stale-cache"), "stale-cache wording should not generate a stale prompt");
+// skipped-result and sentinel-command both appear after the multiline scoring_model
+// scalar, so their presence also proves multiline-scalar parsing stays intact.
 assert(ids.includes("skipped-result"), "SKIPPED latest_result should generate a prompt");
 assert(ids.includes("sentinel-command"), "missing evidence should generate a prompt");
 assert(!ids.includes("next-proof"), "covered/high next_best_proof should not generate a default prompt");
-assert(!ids.includes("project-current-verification-maintenance"), "passing project verification maintenance should not generate a prompt");
-assert(ids.includes("project-rollup-risk"), "project rollup risks after multiline scalars should generate prompts");
 
 const sentinel = records.find((record) => record.expectation_id === "sentinel-command");
 assert(sentinel !== undefined, "sentinel fixture record was not found");
@@ -324,18 +252,13 @@ const mapGeneration = records.find((record) => record.expectation_id === "map-ge
 assert(mapGeneration !== undefined, "map-generation fixture record was not found");
 assert(!mapGeneration.verification_checks.includes("quality-evidence map generation"), "map generation should not be a rerunnable check");
 assert(mapGeneration.evidence_notes.includes("quality-evidence map generation"), "map generation should be preserved as an evidence note");
-
-const projectRollup = records.find((record) => record.expectation_id === "project-rollup-risk");
-assert(projectRollup !== undefined, "project rollup fixture record was not found");
-assert(projectRollup.target_id === "project", "project rollup target id should be preserved");
-assert(projectRollup.evidence_notes.includes("quality-evidence project rollup aggregation"), "project rollup aggregation should be an evidence note");
 JS
 
-project_json="$("$generator" "$repo_dir" --format json --target project)"
-node - "$project_json" <<'JS'
+target_json="$("$generator" "$repo_dir" --format json --target 001-fixture)"
+node - "$target_json" <<'JS'
 const records = JSON.parse(process.argv[2]);
-if (records.length !== 1 || records[0].expectation_id !== "project-rollup-risk") {
-  console.error("--target project should include the project rollup risk");
+if (records.length === 0 || !records.every((record) => record.target_id === "001-fixture")) {
+  console.error("--target 001-fixture should only include the fixture feature prompts");
   process.exit(1);
 }
 JS

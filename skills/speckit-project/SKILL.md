@@ -112,7 +112,7 @@ Prefer existing repo conventions. If none exist, use:
 - `project-map.yaml`: acceptable top-level alternative when the web UI or repo
   conventions prefer a visible root artifact.
 - `specs/NNN-feature-name/`: feature-level Speckit artifacts.
-- `quality-evidence/<target>/`: quality evidence for project or feature.
+- `quality-evidence/<feature>/`: quality evidence for a feature.
 
 Use bundled assets when creating new files:
 
@@ -127,6 +127,12 @@ features from an existing non-Speckit codebase.
 `assets/project-map.template.yaml` is the single source of truth for project map
 shape. When a map is missing, stale, or needs repair, read `references/project-map.md`
 and use `assets/project-map.template.yaml` directly.
+
+Project maps should be readable as product-language summaries before they are
+used as traceability graphs. Write project, release area, feature, and concern
+names/descriptions in terms of product capabilities, workflows, outcomes, and
+quality state. Put technical detail in refs, artifact paths, source types,
+statuses, discovery metadata, and evidence links.
 
 ## Source Types
 
@@ -170,7 +176,7 @@ PRD, feature breakdown, and project map; it does not replace the Spec Kit
 
 Use when converting a PRD into executable feature slices.
 
-1. Identify user personas, workflows, data domains, integrations, and risk
+1. Identify product actors, jobs, workflows, data domains, integrations, and risk
    boundaries.
 2. Split features so each can be specified, implemented, and verified
    independently.
@@ -269,19 +275,20 @@ Use when a repo did not previously use Speckit.
 2. Discover existing docs, routes, APIs, schemas, jobs, tests, CI, and runtime
    behavior.
 3. Group observed behavior into candidate features.
-4. Create a provisional project map with confidence and source types.
+4. Create a provisional project map with source types.
 5. Ask the user to ratify or correct feature boundaries before treating them as
    product truth.
 6. Generate or backfill Speckit feature specs for ratified features.
 
 ## Project Map Maintenance
 
-Keep the map useful for humans, agents, and web UIs:
+Keep the map useful as both a product summary and traceability index:
 
-- Record feature IDs, names, statuses, dependencies, source refs, spec paths,
-  code refs, evidence refs, and residual risks.
-- Use `roadmap.release_areas` for PM-facing release areas: logical groups of
-  feature IDs that should be judged together for readiness. They are not
+- Record product-language project, release area, feature, and concern summaries
+  alongside feature IDs, statuses, dependencies, source refs, spec paths, code
+  refs, evidence refs, and residual risks.
+- Use `roadmap.release_areas` for product-language release areas: logical groups
+  of feature IDs that should be judged together for readiness. They are not
   filesystem directories, feature scopes, git branches, or deployment gates
   unless the project explicitly says so.
 - Use stable IDs. Do not renumber existing features without explicit approval.
@@ -339,10 +346,11 @@ unresolved.
 
 ## Quality And Release Gates
 
-Use `quality-evidence` to create or update:
+Use `quality-evidence` to create or update
+`quality-evidence/<feature>/quality-map.yaml` for each feature.
 
-- `quality-evidence/project/quality-map.yaml` for project-level evidence posture.
-- `quality-evidence/<feature>/quality-map.yaml` for feature-level evidence.
+Do not produce a project-scope quality map. The project map links to each
+feature's quality map, and project-level quality is an aggregate of those maps.
 
 Use `verify` when UI or live behavior needs browser evidence. Use
 `code-review-run` after implementation stabilizes or before PR/release gates.

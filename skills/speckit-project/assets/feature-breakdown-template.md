@@ -21,7 +21,7 @@
 
 ### 001 - <Feature Name>
 
-Goal: <User-visible outcome>
+Goal: <Product outcome or workflow promise>
 
 PRD coverage:
 
@@ -39,7 +39,7 @@ Dependencies: none.
 
 ### 002 - <Feature Name>
 
-Goal: <User-visible outcome>
+Goal: <Product outcome or workflow promise>
 
 PRD coverage:
 

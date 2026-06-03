@@ -32,7 +32,7 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
 ## Reconstruction Steps
 
 1. **Inventory docs and runtime surfaces**
-   - Identify product names, personas, workflows, domains, and integration
+   - Identify product names, actors, jobs, workflows, domains, and integration
      boundaries.
 
 2. **Group candidate features**
@@ -45,18 +45,18 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
    - Otherwise assign stable `001-*`, `002-*` IDs in dependency order.
    - Mark status `candidate` until ratified.
 
-4. **Record source types and confidence**
+4. **Record source types**
    - `IMPLEMENTATION` for code-backed behavior.
    - `INFERRED` for agent-derived feature boundaries.
    - `LEGACY` for behavior that appears old or compatibility-driven.
 
 5. **Create provisional project map**
    - Use `.specify/project-map.yaml` or `project-map.yaml`.
-   - Include docs, candidate features, code refs, test refs, open questions,
-     and orphan areas.
+   - Include product-language project, release area, and feature summaries plus
+     docs, code refs, test refs, open questions, and orphan areas.
 
 6. **Ask for ratification**
-   - Present the feature list with source type, confidence, and open questions.
+   - Present the feature list with source type and open questions.
    - Ask the user to accept, split, merge, rename, defer, or reject features.
 
 7. **Backfill Speckit specs**
@@ -70,19 +70,19 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
 
 8. **Connect evidence**
    - Map existing tests to feature expectations through `quality-evidence`.
-   - Mark missing evidence and residual risk instead of inventing confidence.
+   - Mark missing evidence and residual risk instead of overclaiming.
 
 ## Candidate Feature Notes
 
 For each candidate, capture:
 
-- user-facing goal
+- product goal or workflow promise
 - observed routes/APIs/components/jobs
 - data models or external systems
 - existing tests
 - likely dependencies
 - open questions
-- source type and confidence
+- source type
 - whether behavior seems current, legacy, or deprecated
 
 ## User Ratification Prompt Shape
@@ -92,11 +92,11 @@ When asking the user to ratify, keep it concrete:
 ```text
 I found these candidate features:
 
-001-authentication: IMPLEMENTATION, MEDIUM confidence
+001-authentication: IMPLEMENTATION
 Evidence: app/login, auth middleware, login.spec.ts
 Open question: Are SSO and password login both current requirements?
 
-002-billing-dashboard: INFERRED, LOW confidence
+002-billing-dashboard: INFERRED
 Evidence: billing route and fixtures, no tests
 Open question: Is this an active product area or legacy admin-only UI?
 ```

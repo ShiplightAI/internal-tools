@@ -4,9 +4,9 @@
 
 <What problem this product solves, for whom, and why now.>
 
-## Users And Jobs
+## Product Actors And Jobs
 
-- <User/persona>: <job-to-be-done>
+- <Actor or customer segment>: <job-to-be-done>
 
 ## Goals
 
@@ -34,7 +34,7 @@
 
 - <Data source, system boundary, or third-party integration>
 
-## Release Boundaries
+## Release Areas
 
 ### MVP
 

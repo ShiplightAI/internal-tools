@@ -1,12 +1,12 @@
 ---
 name: quality-evidence
-description: Assess and improve quality evidence for a project or feature by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing owner-facing confidence reports. Speckit-aware but not Speckit-dependent.
+description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
 # Quality Evidence
 
-Quality evidence workflow for projects, features, modules, PRs, tickets, PRDs,
+Quality evidence workflow for features, specs, modules, PRs, tickets, PRDs,
 or user-described changes. Use when the user wants to understand or raise
 confidence in a system through clear quality checks, mapped quality evidence,
 concrete evidence gaps, recommended actions, and an auditable pass/fail report.
@@ -22,7 +22,7 @@ user ratifies them.
 Separate testing into two layers:
 
 1. **Quality checks**: behaviors, properties, requirements, and invariants that
-   must be verified to trust the project or feature.
+   must be verified to trust the feature.
 2. **Testing how**: evidence used to verify the what: unit, contract,
    integration, E2E, agent tests, manual checks, telemetry, static
    checks, smoke tests, CI, or project-specific mechanisms.
@@ -45,11 +45,13 @@ current evidence. Use recommended actions to say what would close the gap.
 
 ## Scope Resolution
 
-Resolve the target before writing artifacts or adding tests:
+Resolve the target before writing artifacts or adding tests. A target is always
+a single feature or spec, identified as a named feature, PRD item, ticket,
+route, module, workflow, branch diff, or implementation area. Quality checks and
+evidence always belong to a feature; features and specs are cleanly separated.
 
-- **Feature scope**: a named feature, PRD item, ticket, route, module, workflow,
-  branch diff, or implementation area.
-- **Project scope**: the whole repo, app, service, package, or subsystem.
+This skill does not produce a project-scope quality map. Project-level quality
+is an aggregate of the individual feature maps.
 
 Use explicit user input first. If the user does not provide a source, silently
 infer the target from current git changes, repo structure, docs, tests, package
@@ -61,9 +63,8 @@ artifacts.
 Use stable target slugs so specs, tasks, quality maps, reports, tests, and UI
 routes can be joined reliably.
 
-- Project scope uses the fixed slug `project`.
-- Feature, module, PR, and ticket scopes use Speckit-style
-  `NNN-kebab-case-name`, for example `026-enterprise-rate-card`.
+- Every target uses a Speckit-style `NNN-kebab-case-name` slug, for example
+  `026-enterprise-rate-card`. There is no special `project` slug.
 - If a source folder, branch, issue, or spec already has a numeric prefix, reuse
   that exact slug. Do not drop `NNN-`.
 - If a repo has `specs/NNN-feature-name`, the default evidence target for that
@@ -95,12 +96,9 @@ Do not invent requirements. Distinguish `SOURCE` quality checks from
 
 Create or update these artifacts:
 
-- Feature target: `quality-evidence/<target-slug>/test-spec.md`
-- Feature target: `quality-evidence/<target-slug>/quality-map.yaml`
-- Feature target: `quality-evidence/<target-slug>/test-report.md`
-- Project target: `quality-evidence/project/test-spec.md`
-- Project target: `quality-evidence/project/quality-map.yaml`
-- Project target: `quality-evidence/project/test-report.md`
+- Per target: `quality-evidence/<target-slug>/test-spec.md`
+- Per target: `quality-evidence/<target-slug>/quality-map.yaml`
+- Per target: `quality-evidence/<target-slug>/test-report.md`
 
 For new projects, use `quality-evidence/`. For existing repos that already use
 the legacy `test-quality/` root, continue updating that root unless the user
@@ -112,10 +110,12 @@ artifacts, use that convention only when it clearly fits, but keep the canonical
 target slug format above. Do not require `specs/`, `plan.md`, `tasks.md`,
 `.specify/`, or Spec Kit templates.
 
-`quality-map.yaml` is the canonical machine-readable artifact. Markdown files
-are owner-readable projections and narrative summaries. When creating a new map,
-copy and fill `assets/quality-map.template.yaml`. When tooling or validation is
-available, validate against `assets/quality-map.schema.json`.
+`quality-map.yaml` is the canonical machine-readable artifact, and its check
+titles, descriptions, gap text, and recommended actions must also be readable in
+product dashboards without opening the source files. Markdown files provide
+longer narrative summaries. When creating a new map, copy and fill
+`assets/quality-map.template.yaml`. When tooling or validation is available,
+validate against `assets/quality-map.schema.json`.
 
 ## Quality Map
 
@@ -141,6 +141,29 @@ Use the map for agent handoff, UI visualization, release gates, trend analysis,
 and gap prioritization. Preserve the input fields behind any confidence
 judgment so scoring formulas can evolve without losing the audit trail.
 
+## Product-Language Check Writing
+
+Dashboards may render `title`, `description`, `risk.rationale`,
+`evaluation.residual_risk`, and `evaluation.next_best_proof` directly, so write
+those fields as product-language summaries first. Use the existing schema; do
+not add free-form keys that fail validation.
+
+- `title`: name the product behavior or quality promise the check proves. Do not
+  name only a command, artifact, or test file.
+- `description`: explain what the check proves and which feature behavior or
+  release confidence it affects.
+- `risk.rationale`: state the quality, user, operational, data, security,
+  billing, or release consequence if the check is not proven.
+- `evaluation.residual_risk`: describe only the open gap or current limitation.
+  Put history in evidence artifacts or the Markdown report unless essential.
+- `evaluation.next_best_proof`: write the recommended action that closes the
+  gap. If there is no open gap, write the maintenance proof.
+
+Put paths, commands, test names, commits, and artifacts in `source_refs`,
+`evidence.path`, `evidence.command`, and `latest_result.artifacts`. Keep
+`SOURCE` product promises, `IMPLEMENTATION`-observed checks, and `INFERRED`
+checks visibly distinct in title and description.
+
 ## Generate Fix Prompts
 
 Invocation shortcut: `fix-prompts`.
@@ -149,7 +172,7 @@ When the user says `quality-evidence fix-prompts`, interpret it as this workflow
 Accept script-style options after the shortcut, for example:
 
 ```text
-quality-evidence fix-prompts --target 001-platform-foundation --limit 10
+quality-evidence fix-prompts --target 026-enterprise-rate-card --limit 10
 ```
 
 When the user wants coding agents to fix many evidence gaps, do not require
@@ -164,7 +187,7 @@ quality maps with the bundled script:
 Useful options:
 
 - `--format json` for automation.
-- `--target <target-id>` for one feature or project target.
+- `--target <target-id>` for one feature target.
 - `--limit <n>` for the highest-priority prompts only.
 - `--include-covered` when auditing every quality check, not just open gaps.
 
@@ -225,7 +248,7 @@ Use overall confidence:
 
 ### 1. Resolve Target And Inputs
 
-- Identify project or feature scope.
+- Identify the feature target.
 - Record source material used and source material not found.
 - Locate prior `test-spec.md`, `quality-map.yaml`, and `test-report.md` for
   this target if present.
@@ -248,6 +271,10 @@ Include:
 - Automated check commands and acceptable evidence options for each test case
   when they are known.
 
+For each testing-what item, draft a product-language check title and description
+before mapping evidence. If the item is an implementation baseline rather than a
+product or feature promise, mark its source type accordingly.
+
 ### 3. Inventory Testing How
 
 Find existing evidence and map it to the testing what in `quality-map.yaml`:
@@ -265,7 +292,7 @@ Find existing evidence and map it to the testing what in `quality-map.yaml`:
 ### 4. Analyze Gaps And Select Proofs
 
 For each weak or missing testing what, choose the cheapest sufficient proof.
-Consider confidence gained, risk severity, stakeholder visibility, flake risk,
+Consider confidence gained, risk severity, release or customer impact, flake risk,
 runtime, fixture complexity, cleanup burden, diagnostic value, and maintenance.
 
 Prioritize gaps with risk-weighted judgment. A release-critical billing,
@@ -279,8 +306,9 @@ Useful defaults:
   validation: contract tests.
 - DB state, transactions, audit rows, migrations, jobs, and cross-module
   invariants: integration tests.
-- User-visible browser behavior, routing, session behavior, role-gated UI, and
-  rendered regressions: project-standard E2E, agent, or manual browser checks.
+- Browser-rendered product behavior, routing, session behavior, role-gated UI,
+  and rendered regressions: project-standard E2E, agent, or manual browser
+  checks.
 - Third-party callbacks, staging-only auth, production SLOs, and live signals:
   agent tests, manual checks, or telemetry.
 
@@ -321,6 +349,9 @@ Use the bundled schema as the validation contract for tools and UIs:
 On repeat runs:
 
 - Preserve stable expectation and evidence ids when the meaning is unchanged.
+- Rewrite confusing titles, descriptions, residual-risk text, and next-best
+  proof text when the meaning is unchanged but the dashboard would be hard to
+  understand.
 - Refresh latest results, timestamps, commits, artifacts, and CI-gating status.
 - Update weighted evaluations only when evidence or risk actually changed.
 - Mark stale, flaky, blocked, missing, or deferred evidence explicitly.
@@ -417,7 +448,7 @@ Use these sections unless the repo has a better local convention.
 ```markdown
 # Test Spec: <Target>
 
-**Scope**: <project|feature|module|PR|ticket>
+**Scope**: <feature|module|PR|ticket>
 **Source material**: <paths, prompt, issue, PRD, inferred>
 **Test report**: [test-report.md](./test-report.md)
 
@@ -434,7 +465,7 @@ Use these sections unless the repo has a better local convention.
 ```yaml
 schema_version: 1
 target:
-  id: 001-example-feature # or project for project scope
+  id: 001-example-feature # numbered feature slug
   name: <target name>
   scope: feature
   aliases: []
@@ -513,7 +544,8 @@ use `assets/quality-map.schema.json`.
   explicit observation.
 - Never report browser/live behavior as verified by a coding agent without
   auditable evidence.
-- Prefer owner-facing clarity over exhaustive detail.
+- Prefer product-language summaries with technical details preserved in evidence
+  fields.
 
 ## When Not To Use
 
