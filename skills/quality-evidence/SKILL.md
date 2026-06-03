@@ -164,6 +164,22 @@ Put paths, commands, test names, commits, and artifacts in `source_refs`,
 `SOURCE` product promises, `IMPLEMENTATION`-observed checks, and `INFERRED`
 checks visibly distinct in title and description.
 
+Documentation-baseline checks should stay compact and secondary. If a target
+includes a check that says the current docs/specs/contracts are aligned, keep it
+to a lightweight baseline:
+
+- Use one concise documentation-baseline check at most.
+- Prefer `source_refs` to enumerate related docs instead of many separate static
+  evidence rows.
+- If static evidence is still useful, keep it to one compact evidence bundle or
+  a short list, not one row per source file unless a tool requires that shape.
+- Do not let the documentation-baseline check carry the main coverage story for
+  the feature. Runtime behavior, data rules, browser flows, provider behavior,
+  and release gating should be described by separate feature-behavior checks.
+- `evaluation.next_best_proof` for a documentation-baseline check should usually
+  be a maintenance action or a pointer to the real runtime proof still needed,
+  not the primary readiness conclusion for the feature.
+
 ## Generate Fix Prompts
 
 Invocation shortcut: `fix-prompts`.
@@ -352,6 +368,8 @@ On repeat runs:
 - Rewrite confusing titles, descriptions, residual-risk text, and next-best
   proof text when the meaning is unchanged but the dashboard would be hard to
   understand.
+- Collapse bloated documentation-baseline evidence lists when they are only
+  proving source alignment rather than feature behavior.
 - Refresh latest results, timestamps, commits, artifacts, and CI-gating status.
 - Update weighted evaluations only when evidence or risk actually changed.
 - Mark stale, flaky, blocked, missing, or deferred evidence explicitly.
