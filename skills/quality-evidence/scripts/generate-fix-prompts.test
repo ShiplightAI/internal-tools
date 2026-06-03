@@ -204,6 +204,33 @@ expectations:
       weighted_confidence: MEDIUM
       residual_risk: Generated map still depends on a feature-level gap.
       next_best_proof: null
+  - id: docs-only-source-snapshot
+    title: Docs-only source snapshot still needs runtime proof
+    source_type: SOURCE
+    category: other
+    priority: P1
+    risk:
+      weight: 3
+      rationale: Docs-only evidence can mislead agents into stopping after a framing cleanup.
+    evidence:
+      - id: docs-only-source-snapshot-proof
+        type: static
+        path: specs/001-fixture/spec.md
+        command: Documentation-baseline review
+        depth: STATIC
+        ci_gated: false
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: PARTIAL
+      confidence: MEDIUM
+      breadth: WEAK
+      depth: WEAK
+      freshness: FRESH
+      weighted_confidence: MEDIUM
+      residual_risk: Documentation alignment alone does not prove runtime behavior works correctly in running environments.
+      next_best_proof: Keep the documented source of truth updated in the same change whenever behavior changes, and rely on the feature's runtime behavior checks for release readiness.
 gap_summary:
   release_blockers: []
   high_risk_gaps: []
@@ -252,6 +279,18 @@ const mapGeneration = records.find((record) => record.expectation_id === "map-ge
 assert(mapGeneration !== undefined, "map-generation fixture record was not found");
 assert(!mapGeneration.verification_checks.includes("quality-evidence map generation"), "map generation should not be a rerunnable check");
 assert(mapGeneration.evidence_notes.includes("quality-evidence map generation"), "map generation should be preserved as an evidence note");
+
+const docsOnly = records.find((record) => record.expectation_id === "docs-only-source-snapshot");
+assert(docsOnly !== undefined, "docs-only source snapshot fixture record was not found");
+assert(docsOnly.closure_mode === "proof_upgrade", "docs-only source snapshot should require a proof upgrade");
+assert(docsOnly.closure_condition.includes("stronger direct passing proof"), "docs-only source snapshot should state the stronger-proof closure condition");
+assert(docsOnly.non_closing_changes.some((item) => item.includes("Refreshing or reframing the current weak, manual, static, or indirect evidence")), "docs-only source snapshot should warn that reframing weak evidence is not sufficient");
+assert(docsOnly.recommended_action.includes("Add stronger direct passing proof"), "docs-only source snapshot should replace maintenance guidance with a closure-aligned recommended action");
+assert(!docsOnly.recommended_action.includes("Keep the documented source of truth updated"), "docs-only source snapshot should not keep the maintenance-only next_best_proof as the recommended action");
+assert(docsOnly.prompt.includes("Closure condition on next scan:"), "prompt should include the closure condition section");
+assert(docsOnly.prompt.includes("Changes that do not count as success by themselves:"), "prompt should include the non-closing changes section");
+assert(docsOnly.prompt.includes("Recommended action: Add stronger direct passing proof"), "prompt should surface the closure-aligned recommended action");
+assert(docsOnly.prompt.includes("treat this task as complete only if the next scan stops reporting this quality check as open"), "prompt should define success in terms of the next scan result");
 JS
 
 target_json="$("$generator" "$repo_dir" --format json --target 001-fixture)"

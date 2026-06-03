@@ -35,6 +35,9 @@ interface FixPromptRecord {
   readonly quality_expectation: string;
   readonly verification_checks: readonly string[];
   readonly evidence_notes: readonly string[];
+  readonly closure_mode: string;
+  readonly closure_condition: string;
+  readonly non_closing_changes: readonly string[];
   readonly prompt: string;
 }
 
@@ -594,6 +597,45 @@ function hasOpenRiskLanguage(expectation: JsonObject): boolean {
   return includesStandaloneAny(text, ["blocked", "deferred", "stale"]);
 }
 
+function hasMissingEvidence(expectation: JsonObject): boolean {
+  return asArray(expectation.evidence).length === 0;
+}
+
+function hasFailingEvidence(expectation: JsonObject): boolean {
+  return asArray(expectation.evidence).some((evidenceValue) => {
+    const evidence = asObject(evidenceValue);
+    return FAILING_RESULTS.has(evidenceStatus(evidence));
+  });
+}
+
+function hasBlockedOrDeferredLanguage(expectation: JsonObject): boolean {
+  const evaluation = asObject(expectation.evaluation);
+  const text = [
+    scalar(evaluation.residual_risk),
+    scalar(evaluation.next_best_proof),
+    ...asArray(expectation.evidence).flatMap((evidenceValue) => {
+      const evidence = asObject(evidenceValue);
+      const latest = asObject(evidence.latest_result);
+      return [
+        scalar(evidence.reliability),
+        scalar(latest.status)
+      ];
+    })
+  ].join(" ").toLowerCase();
+
+  return includesStandaloneAny(text, ["blocked", "deferred"]);
+}
+
+function evidenceDepthSummary(expectation: JsonObject): string {
+  const depths = dedupe(
+    asArray(expectation.evidence)
+      .map((evidenceValue) => scalar(asObject(evidenceValue).depth))
+      .filter((depth) => depth.length > 0)
+  );
+
+  return depths.length === 0 ? "current evidence" : depths.join(", ");
+}
+
 function expectationNeedsFix(expectation: JsonObject, includeCovered: boolean): boolean {
   if (includeCovered) {
     return true;
@@ -651,6 +693,77 @@ function hasActionableBadResult(expectation: JsonObject): boolean {
   return hasUnprovenEvidence && !hasPassingEvidence;
 }
 
+function closureMode(expectation: JsonObject): string {
+  const evaluation = asObject(expectation.evaluation);
+
+  if (hasMissingEvidence(expectation)) {
+    return "missing_evidence";
+  }
+  if (hasFailingEvidence(expectation)) {
+    return "failing_verification";
+  }
+  if (BAD_FRESHNESS.has(upper(evaluation.freshness))) {
+    return "stale_evidence";
+  }
+  if (hasManualOnlyEvidence(expectation) || hasWeakEvidence(expectation)) {
+    return "proof_upgrade";
+  }
+  if (hasBlockedOrDeferredLanguage(expectation)) {
+    return "blocked_or_deferred";
+  }
+  if (hasActionableBadResult(expectation)) {
+    return "verification_run";
+  }
+
+  return "general_gap";
+}
+
+function closureCondition(expectation: JsonObject): string {
+  const mode = closureMode(expectation);
+  const action = recommendedActionText(expectation);
+
+  if (mode === "missing_evidence") {
+    return "On the next scan, this quality check must include linked proof with a current passing result instead of remaining unmapped or empty.";
+  }
+  if (mode === "failing_verification") {
+    return "On the next scan, the linked failing verification must pass and this quality check must stop reporting failing or partial proof.";
+  }
+  if (mode === "stale_evidence") {
+    return "On the next scan, rerun or replace the stale proof so freshness is current and the quality check no longer reports stale evidence.";
+  }
+  if (mode === "proof_upgrade") {
+    return `On the next scan, this quality check must gain stronger direct passing proof than the current ${evidenceDepthSummary(expectation)} evidence.`;
+  }
+  if (mode === "blocked_or_deferred") {
+    return `On the next scan, the blocked or deferred condition must be removed or replaced with current passing proof. ${action}`;
+  }
+  if (mode === "verification_run") {
+    return "On the next scan, the linked verification must produce current passing proof instead of skipped, deferred, unknown, or not-run status.";
+  }
+
+  return "On the next scan, this quality check must no longer appear as open evidence work.";
+}
+
+function nonClosingChanges(expectation: JsonObject): string[] {
+  const changes = [
+    "Editing quality-map.yaml, test-spec.md, or test-report.md without changing the underlying proof.",
+    "Stopping after wording cleanup because the evidence description sounds more accurate."
+  ];
+  const mode = closureMode(expectation);
+
+  if (mode === "proof_upgrade") {
+    changes.push("Refreshing or reframing the current weak, manual, static, or indirect evidence without adding stronger direct passing proof.");
+  }
+  if (mode === "missing_evidence") {
+    changes.push("Leaving the quality check without a linked passing artifact, command result, or test path.");
+  }
+  if (mode === "failing_verification" || mode === "verification_run" || mode === "stale_evidence") {
+    changes.push("Updating quality evidence files before rerunning the mapped verification checks.");
+  }
+
+  return dedupe(changes);
+}
+
 function problemText(expectation: JsonObject): string {
   const evaluation = asObject(expectation.evaluation);
   if (usefulText(evaluation.residual_risk)) {
@@ -663,13 +776,76 @@ function problemText(expectation: JsonObject): string {
   return `Current evidence for ${title} is ${coverage} with ${confidence} confidence.`;
 }
 
-function recommendedActionText(expectation: JsonObject): string {
-  const evaluation = asObject(expectation.evaluation);
-  if (usefulText(evaluation.next_best_proof)) {
-    return scalar(evaluation.next_best_proof);
+function fallbackRecommendedAction(expectation: JsonObject, mode: string): string {
+  if (mode === "missing_evidence") {
+    return "Add linked proof with a current passing result and rerun the mapped verification checks.";
+  }
+  if (mode === "failing_verification") {
+    return "Fix the failing verification, rerun it, and update quality evidence only after the proof passes.";
+  }
+  if (mode === "stale_evidence") {
+    return "Rerun or replace the stale proof with current passing evidence and rerun the mapped verification checks.";
+  }
+  if (mode === "proof_upgrade") {
+    return `Add stronger direct passing proof than the current ${evidenceDepthSummary(expectation)} evidence and rerun the mapped verification checks.`;
+  }
+  if (mode === "blocked_or_deferred") {
+    return "Remove the blocked or deferred condition by obtaining current passing proof or the missing dependency, then rerun the mapped verification checks.";
+  }
+  if (mode === "verification_run") {
+    return "Run or rerun the mapped verification until it produces current passing proof, then update quality evidence.";
   }
 
   return "No source-provided recommended action. Use the source-of-truth inputs to identify the smallest evidence or implementation change that closes the gap.";
+}
+
+function sourceActionMatchesClosure(action: string, mode: string): boolean {
+  const normalized = action.toLowerCase();
+  if (normalized.length === 0) {
+    return false;
+  }
+  if (includesAny(normalized, [
+    "rely on the feature's runtime behavior checks",
+    "rely on runtime behavior checks",
+    "tracked separately",
+    "keep the documented source of truth updated"
+  ])) {
+    return false;
+  }
+
+  if (mode === "proof_upgrade") {
+    return includesAny(normalized, [
+      "add", "capture", "collect", "record", "upgrade", "direct proof",
+      "direct passing proof", "runtime proof", "integration", "browser",
+      "e2e", "coverage", "rerun", "run"
+    ]);
+  }
+  if (mode === "missing_evidence") {
+    return includesAny(normalized, ["add", "attach", "capture", "collect", "record", "rerun", "run"]);
+  }
+  if (mode === "failing_verification" || mode === "verification_run") {
+    return includesAny(normalized, ["fix", "rerun", "run", "pass", "repair"]);
+  }
+  if (mode === "stale_evidence") {
+    return includesAny(normalized, ["rerun", "replace", "refresh", "capture", "collect"]);
+  }
+  if (mode === "blocked_or_deferred") {
+    return includesAny(normalized, ["unblock", "restore", "provision", "rerun", "run", "capture", "collect", "replace"]);
+  }
+
+  return true;
+}
+
+function recommendedActionText(expectation: JsonObject): string {
+  const evaluation = asObject(expectation.evaluation);
+  const mode = closureMode(expectation);
+  const sourceAction = usefulText(evaluation.next_best_proof) ? scalar(evaluation.next_best_proof) : "";
+
+  if (sourceActionMatchesClosure(sourceAction, mode)) {
+    return sourceAction;
+  }
+
+  return fallbackRecommendedAction(expectation, mode);
 }
 
 function scopeLine(target: JsonObject): readonly [string, string] {
@@ -713,6 +889,13 @@ function buildPrompt(record: Omit<FixPromptRecord, "prompt">): string {
     "Quality check:",
     `- ${record.quality_expectation}`,
     "",
+    `Closure mode: ${record.closure_mode}`,
+    "",
+    `Closure condition on next scan: ${record.closure_condition}`,
+    "",
+    "Changes that do not count as success by themselves:",
+    ...record.non_closing_changes.map((item) => `- ${item}`),
+    "",
     ...(record.evidence_notes.length === 0 ? [] : [
       "Evidence notes:",
       ...record.evidence_notes.map((item) => `- ${item}`),
@@ -722,7 +905,7 @@ function buildPrompt(record: Omit<FixPromptRecord, "prompt">): string {
     ...checks.map((item) => `- ${item}`),
     "",
     "Task:",
-    "Close the evidence gap in the smallest correct way. Establish the concrete root cause from the source-of-truth inputs, change implementation only when the inputs prove a product defect, add or update regression/manual evidence when needed, rerun the verification checks, and update quality evidence only if the verified result changes."
+    "Close the evidence gap in the smallest correct way. Establish the concrete root cause from the source-of-truth inputs, change implementation only when the inputs prove a product defect, add or update regression/manual evidence when needed, rerun the verification checks, and treat this task as complete only if the next scan stops reporting this quality check as open."
   ];
   return lines.join("\n");
 }
@@ -767,7 +950,10 @@ function collectPrompts(repo: string, includeCovered: boolean, targetFilter: str
         source_of_truth_inputs: sourceInputs(repo, mapPath, target, expectation),
         quality_expectation: `${qualityMap}#expectation:${expectationId}`,
         verification_checks: verification.checks,
-        evidence_notes: verification.notes
+        evidence_notes: verification.notes,
+        closure_mode: closureMode(expectation),
+        closure_condition: closureCondition(expectation),
+        non_closing_changes: nonClosingChanges(expectation)
       };
       records.push({
         ...partialRecord,
