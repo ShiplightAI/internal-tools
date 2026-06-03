@@ -7,22 +7,22 @@ user_invocable: true
 # Quality Evidence
 
 Quality evidence workflow for projects, features, modules, PRs, tickets, PRDs,
-or user-described changes. Use when the owner wants to understand or raise
-confidence in a system through clear "what must be proven", clear "how it is
-proven", focused improvements, and an auditable pass/fail report.
+or user-described changes. Use when the user wants to understand or raise
+confidence in a system through clear quality checks, mapped quality evidence,
+concrete evidence gaps, recommended actions, and an auditable pass/fail report.
 
 This skill is Speckit-aware but not Speckit-dependent. It works best when a
 Speckit spec provides the upstream truth; for brownfield projects, it can
-reconstruct provisional expectations from docs, code, tests, CI, and runtime
-behavior, then mark those expectations as `IMPLEMENTATION` or `INFERRED` until
-the user ratifies them.
+reconstruct provisional quality checks from docs, code, tests, CI, and runtime
+behavior, then mark those checks as `IMPLEMENTATION` or `INFERRED` until the
+user ratifies them.
 
 ## Core Model
 
 Separate testing into two layers:
 
-1. **Testing what**: behaviors, properties, risks, and expectations that must
-   be verified to trust the project or feature.
+1. **Quality checks**: behaviors, properties, requirements, and invariants that
+   must be verified to trust the project or feature.
 2. **Testing how**: evidence used to verify the what: unit, contract,
    integration, E2E, agent tests, manual checks, telemetry, static
    checks, smoke tests, CI, or project-specific mechanisms.
@@ -33,13 +33,15 @@ of cost, stability, latency, diagnostic value, and maintenance.
 Represent quality as an evidence graph:
 
 ```text
-expectation -> task/implementation -> test intent -> executable evidence ->
-latest result -> weighted evaluation -> residual risk
+quality check -> task/implementation -> test intent -> executable evidence ->
+latest result -> weighted evaluation -> evidence gap / recommended action
 ```
 
-Each expectation should carry a risk weight before evaluating tests. Evidence
-should then be judged by breadth, depth, latest result, reliability, freshness,
-and whether it is CI/release gated. Do not weight every test equally.
+Each quality check should carry an impact weight before evaluating tests.
+Evidence should then be judged by breadth, depth, latest result, reliability,
+freshness, and whether it is CI/release gated. Do not weight every test equally.
+Use evidence gaps to describe the concrete difference between the check and the
+current evidence. Use recommended actions to say what would close the gap.
 
 ## Scope Resolution
 
@@ -51,7 +53,8 @@ Resolve the target before writing artifacts or adding tests:
 
 Use explicit user input first. If the user does not provide a source, silently
 infer the target from current git changes, repo structure, docs, tests, package
-scripts, and CI config. Mark inferred expectations as `INFERRED` in artifacts.
+scripts, and CI config. Mark inferred quality checks as `INFERRED` in
+artifacts.
 
 ## Target Slug Naming
 
@@ -85,8 +88,8 @@ Gather only the source material needed for the target:
   CI, scripts, typecheck, lint, and previous reports.
 - Runtime/app behavior when relevant and feasible.
 
-Do not invent requirements. Distinguish `SOURCE` expectations from
-`IMPLEMENTATION` expectations and `INFERRED` expectations.
+Do not invent requirements. Distinguish `SOURCE` quality checks from
+`IMPLEMENTATION` quality checks and `INFERRED` quality checks.
 
 ## Artifact Location
 
@@ -116,21 +119,23 @@ available, validate against `assets/quality-map.schema.json`.
 
 ## Quality Map
 
-Maintain `quality-map.yaml` around expectations, not test files. Each
-expectation should include:
+Maintain `quality-map.yaml` around quality checks, not test files. The current
+map schema stores quality checks under the `expectations` key. Each check should
+include:
 
-- Stable expectation id and title.
+- Stable check id and title.
 - Source type: `SOURCE`, `IMPLEMENTATION`, or `INFERRED`.
 - Source references to specs, PRDs, issues, code, docs, or user input.
 - Category and priority.
-- Risk weight from 1 to 5 with rationale.
+- Impact/risk weight from 1 to 5 with rationale.
 - Related implementation tasks when available.
 - Evidence entries for unit, contract, integration, E2E, agent, manual,
   telemetry, static, smoke, script, or project-specific checks.
 - Latest result status, command or artifact path, commit/timestamp when known,
   and whether the evidence is CI/release gated.
 - Evaluation fields: coverage status, confidence, breadth, depth, freshness,
-  weighted confidence, residual risk, and next best proof.
+  weighted confidence, residual risk, and next best proof. Treat residual risk
+  as the gap impact, and next best proof as the recommended action.
 
 Use the map for agent handoff, UI visualization, release gates, trend analysis,
 and gap prioritization. Preserve the input fields behind any confidence
@@ -147,7 +152,7 @@ Accept script-style options after the shortcut, for example:
 quality-evidence fix-prompts --target 001-platform-foundation --limit 10
 ```
 
-When the user wants coding agents to fix many readiness risks, do not require
+When the user wants coding agents to fix many evidence gaps, do not require
 manual copy/paste from a dashboard. Generate prompts directly from the repo's
 quality maps with the bundled script:
 
@@ -161,7 +166,7 @@ Useful options:
 - `--format json` for automation.
 - `--target <target-id>` for one feature or project target.
 - `--limit <n>` for the highest-priority prompts only.
-- `--include-covered` when auditing every expectation, not just risks.
+- `--include-covered` when auditing every quality check, not just open gaps.
 
 Relative `--output` paths are resolved under `<repo-root>`.
 

@@ -30,6 +30,7 @@ interface FixPromptRecord {
   readonly scope_label: string;
   readonly scope_value: string;
   readonly problem: string;
+  readonly recommended_action: string;
   readonly source_of_truth_inputs: readonly string[];
   readonly quality_expectation: string;
   readonly verification_checks: readonly string[];
@@ -54,7 +55,8 @@ const EMPTY_TEXT = new Set(["", "none", "n/a", "na", "null", "unavailable", "unk
 const NON_RUNNABLE_COMMANDS = new Set([
   "no evidence artifact found",
   "see linked artifact or runbook",
-  "quality-evidence map generation"
+  "quality-evidence map generation",
+  "quality-evidence project rollup aggregation"
 ]);
 
 function scalar(value: JsonValue | undefined): string {
@@ -77,6 +79,10 @@ function upper(value: JsonValue | undefined): string {
   return scalar(value).toUpperCase();
 }
 
+function lower(value: JsonValue | undefined): string {
+  return scalar(value).toLowerCase();
+}
+
 function asObject(value: JsonValue | undefined): JsonObject {
   return value !== undefined && value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
@@ -91,6 +97,19 @@ function usefulText(value: JsonValue | undefined): boolean {
     return false;
   }
   return !(text.startsWith("<") && text.endsWith(">"));
+}
+
+function includesAny(value: string, terms: readonly string[]): boolean {
+  return terms.some((term) => value.includes(term));
+}
+
+function includesStandaloneTerm(value: string, term: string): boolean {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9-])${escaped}($|[^a-z0-9-])`).test(value);
+}
+
+function includesStandaloneAny(value: string, terms: readonly string[]): boolean {
+  return terms.some((term) => includesStandaloneTerm(value, term));
 }
 
 function stripComment(line: string): string {
@@ -297,8 +316,13 @@ function parseMapping(lines: readonly ParsedLine[], index: number, indent: numbe
       }
       output[key] = rawValue === ">" ? blockLines.join(" ") : blockLines.join("\n");
     } else {
-      output[key] = parseScalar(rawValue);
+      const continuedValue = [rawValue];
       cursor += 1;
+      while (cursor < lines.length && (lines[cursor]?.indent ?? 0) > line.indent) {
+        continuedValue.push(lines[cursor]?.text ?? "");
+        cursor += 1;
+      }
+      output[key] = parseScalar(continuedValue.join(" "));
     }
   }
 
@@ -506,6 +530,71 @@ function verificationDetails(expectation: JsonObject): { checks: string[]; notes
   };
 }
 
+function evidenceStatus(evidence: JsonObject): string {
+  const latest = asObject(evidence.latest_result);
+  return upper(latest.status ?? evidence.reliability);
+}
+
+function hasDirectPassingEvidence(expectation: JsonObject): boolean {
+  return asArray(expectation.evidence).some((evidenceValue) => {
+    const evidence = asObject(evidenceValue);
+    return lower(evidence.depth) === "direct" && evidenceStatus(evidence) === "PASS";
+  });
+}
+
+function hasWeakEvidence(expectation: JsonObject): boolean {
+  const evidenceEntries = asArray(expectation.evidence).map(asObject);
+  if (evidenceEntries.length === 0 || hasDirectPassingEvidence(expectation)) {
+    return false;
+  }
+
+  return evidenceEntries.some((evidence) => {
+    const depth = lower(evidence.depth);
+    const type = lower(evidence.type);
+    const state = evidenceStatus(evidence).toLowerCase();
+
+    return (
+      depth.length === 0 ||
+      includesAny(depth, ["manual", "static", "indirect", "implicit", "unknown"]) ||
+      includesAny(type, ["manual", "static"]) ||
+      includesAny(state, ["not run", "unknown", "skipped"])
+    );
+  });
+}
+
+function hasManualOnlyEvidence(expectation: JsonObject): boolean {
+  const evidenceEntries = asArray(expectation.evidence).map(asObject);
+  return evidenceEntries.length > 0 &&
+    !hasDirectPassingEvidence(expectation) &&
+    evidenceEntries.every((evidence) => includesAny(`${lower(evidence.type)} ${lower(evidence.depth)}`, ["manual"]));
+}
+
+function hasOpenRiskLanguage(expectation: JsonObject): boolean {
+  const evaluation = asObject(expectation.evaluation);
+  const text = [
+    scalar(evaluation.residual_risk),
+    scalar(evaluation.next_best_proof),
+    scalar(evaluation.freshness),
+    ...asArray(expectation.evidence).flatMap((evidenceValue) => {
+      const evidence = asObject(evidenceValue);
+      const latest = asObject(evidence.latest_result);
+      return [
+        scalar(evidence.type),
+        scalar(evidence.depth),
+        scalar(evidence.reliability),
+        scalar(evidence.path),
+        scalar(evidence.url),
+        scalar(evidence.command),
+        scalar(latest.status),
+        scalar(latest.run_at),
+        scalar(latest.commit)
+      ];
+    })
+  ].join(" ").toLowerCase();
+
+  return includesStandaloneAny(text, ["blocked", "deferred", "stale"]);
+}
+
 function expectationNeedsFix(expectation: JsonObject, includeCovered: boolean): boolean {
   if (includeCovered) {
     return true;
@@ -524,7 +613,10 @@ function expectationNeedsFix(expectation: JsonObject, includeCovered: boolean): 
   if (BAD_FRESHNESS.has(upper(evaluation.freshness))) {
     return true;
   }
-  if (usefulText(evaluation.next_best_proof)) {
+  if (hasOpenRiskLanguage(expectation)) {
+    return true;
+  }
+  if (hasManualOnlyEvidence(expectation) || hasWeakEvidence(expectation)) {
     return true;
   }
 
@@ -572,6 +664,15 @@ function problemText(expectation: JsonObject): string {
   return `Current evidence for ${title} is ${coverage} with ${confidence} confidence.`;
 }
 
+function recommendedActionText(expectation: JsonObject): string {
+  const evaluation = asObject(expectation.evaluation);
+  if (usefulText(evaluation.next_best_proof)) {
+    return scalar(evaluation.next_best_proof);
+  }
+
+  return "No source-provided recommended action. Use the source-of-truth inputs to identify the smallest evidence or implementation change that closes the gap.";
+}
+
 function scopeLine(target: JsonObject): readonly [string, string] {
   const targetId = scalar(target.id);
   const targetName = scalar(target.name) || targetId || "unknown target";
@@ -602,16 +703,18 @@ function buildPrompt(record: Omit<FixPromptRecord, "prompt">): string {
     ? ["No exact verification command or test path is mapped."]
     : record.verification_checks;
   const lines = [
-    "Fix the readiness risk in this repo.",
+    "Fix the evidence gap in this repo.",
     "",
     `${record.scope_label}: ${record.scope_value}`,
     "",
     `Problem: ${record.problem}`,
     "",
+    `Recommended action: ${record.recommended_action}`,
+    "",
     "Source-of-truth inputs:",
     ...record.source_of_truth_inputs.map((item) => `- ${item}`),
     "",
-    "Quality expectation:",
+    "Quality check:",
     `- ${record.quality_expectation}`,
     "",
     ...(record.evidence_notes.length === 0 ? [] : [
@@ -664,6 +767,7 @@ function collectPrompts(repo: string, includeCovered: boolean, targetFilter: str
         scope_label: scopeLabel,
         scope_value: scopeValue,
         problem: problemText(expectation),
+        recommended_action: recommendedActionText(expectation),
         source_of_truth_inputs: sourceInputs(repo, mapPath, target, expectation),
         quality_expectation: `${qualityMap}#expectation:${expectationId}`,
         verification_checks: verification.checks,
@@ -700,7 +804,7 @@ function renderMarkdown(repo: string, records: readonly FixPromptRecord[]): stri
   ];
 
   if (records.length === 0) {
-    lines.push("No readiness risks were found in quality-map evaluations.", "");
+    lines.push("No evidence gaps were found in quality-map evaluations.", "");
     return lines.join("\n");
   }
 
@@ -710,7 +814,7 @@ function renderMarkdown(repo: string, records: readonly FixPromptRecord[]): stri
       `## ${index + 1}. ${record.priority} ${record.target_id} / ${title}`,
       "",
       `- Quality map: \`${record.quality_map}\``,
-      `- Expectation: \`${record.expectation_id}\``,
+      `- Quality check: \`${record.expectation_id}\``,
       `- Risk weight: ${record.risk_weight}`,
       "",
       "```text",
@@ -805,7 +909,7 @@ Options:
   --output <path>          Write output to a file instead of stdout.
   --limit <n>              Emit only the highest-priority n prompts.
   --target <target-id>     Emit prompts for one quality-map target id.
-  --include-covered        Include covered/high-confidence expectations too.
+  --include-covered        Include covered/high-confidence quality checks and future proof recommendations too.
   --help                   Show this help.
 `);
 }

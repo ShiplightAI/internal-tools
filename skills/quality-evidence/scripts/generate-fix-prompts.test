@@ -11,7 +11,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "${repo_dir}/quality-evidence/001-fixture"
+mkdir -p "${repo_dir}/quality-evidence/001-fixture" "${repo_dir}/quality-evidence/project"
 
 cat > "${repo_dir}/quality-evidence/001-fixture/quality-map.yaml" <<'YAML'
 schema_version: 1
@@ -83,6 +83,33 @@ expectations:
       weighted_confidence: HIGH
       residual_risk: ""
       next_best_proof: null
+  - id: covered-stale-cache
+    title: Covered stale-cache wording should not become stale evidence
+    source_type: SOURCE
+    category: security
+    priority: P0
+    risk:
+      weight: 5
+      rationale: Hyphenated technical terms must not create false stale risks.
+    evidence:
+      - id: covered-stale-cache-proof
+        type: integration
+        path: tests/stale-cache-covered.test.ts
+        command: pnpm test tests/stale-cache-covered.test.ts
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: The stale-cache boundary is covered by direct integration evidence.
+      next_best_proof: null
   - id: sentinel-command
     title: Missing artifact sentinel is not a runnable check
     source_type: SOURCE
@@ -120,7 +147,7 @@ expectations:
       residual_risk: The current evidence artifact is not attached.
       next_best_proof: Attach or rerun the agent verification artifact.
   - id: next-proof
-    title: Explicit next proof is actionable
+    title: Explicit recommended action is actionable
     source_type: SOURCE
     category: ui
     priority: P1
@@ -180,10 +207,88 @@ gap_summary:
   deferred_items: []
 YAML
 
-json_output="$("$generator" "$repo_dir" --format json)"
+cat > "${repo_dir}/quality-evidence/project/quality-map.yaml" <<'YAML'
+schema_version: 1
+target:
+  id: project
+  name: Fixture Project Rollup
+  scope: project
+  source_refs:
+    - path: .specify/project-map.yaml
+assessment:
+  updated_at: 2026-06-01T00:00:00Z
+  branch: main
+  commit: abc123
+  generated_by: quality-evidence
+  overall_status: PARTIAL
+  overall_confidence: MEDIUM
+scoring_model:
+  formula: Project feature scores are averaged from per-feature maps; current
+    failing verification lowers the displayed confidence score and sets
+    overall_status to FAIL.
+expectations:
+  - id: project-current-verification-maintenance
+    title: Current repo verification commands pass
+    source_type: IMPLEMENTATION
+    category: ops
+    priority: P0
+    risk:
+      weight: 5
+      rationale: Passing project verification should not be emitted as fix work.
+    evidence:
+      - id: project-pnpm-test
+        type: script
+        path: package.json
+        command: pnpm test
+        depth: DIRECT
+        ci_gated: true
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: No current local P0 verification blocker remains.
+      next_best_proof: Keep pnpm test in CI/release gates.
+  - id: project-rollup-risk
+    title: Project rollup carries feature residual risk
+    source_type: SOURCE
+    category: ops
+    priority: P0
+    risk:
+      weight: 5
+      rationale: Release-critical project risk should be visible to agents.
+    evidence:
+      - id: project-rollup-quality-map
+        type: static
+        path: quality-evidence/001-fixture/quality-map.yaml
+        command: quality-evidence project rollup aggregation
+        depth: DIRECT
+        ci_gated: false
+        reliability: STRONG
+        latest_result:
+          status: PASS
+    evaluation:
+      coverage_status: COVERED
+      confidence: HIGH
+      breadth: STRONG
+      depth: STRONG
+      freshness: FRESH
+      weighted_confidence: HIGH
+      residual_risk: Browser/live/provider telemetry remains deferred.
+      next_best_proof: Capture current browser evidence for the rolled-up feature.
+YAML
 
-node - "$json_output" <<'JS'
+json_output="$("$generator" "$repo_dir" --format json)"
+include_covered_json="$("$generator" "$repo_dir" --format json --include-covered)"
+
+node - "$json_output" "$include_covered_json" <<'JS'
 const records = JSON.parse(process.argv[2]);
+const includeCoveredRecords = JSON.parse(process.argv[3]);
 const ids = records.map((record) => record.expectation_id);
 
 function assert(condition, message) {
@@ -194,9 +299,12 @@ function assert(condition, message) {
 }
 
 assert(!ids.includes("covered-context"), "covered/high residual context should not generate a prompt");
+assert(!ids.includes("covered-stale-cache"), "stale-cache wording should not generate a stale prompt");
 assert(ids.includes("skipped-result"), "SKIPPED latest_result should generate a prompt");
 assert(ids.includes("sentinel-command"), "missing evidence should generate a prompt");
-assert(ids.includes("next-proof"), "explicit next_best_proof should generate a prompt");
+assert(!ids.includes("next-proof"), "covered/high next_best_proof should not generate a default prompt");
+assert(!ids.includes("project-current-verification-maintenance"), "passing project verification maintenance should not generate a prompt");
+assert(ids.includes("project-rollup-risk"), "project rollup risks after multiline scalars should generate prompts");
 
 const sentinel = records.find((record) => record.expectation_id === "sentinel-command");
 assert(sentinel !== undefined, "sentinel fixture record was not found");
@@ -206,8 +314,8 @@ assert(sentinel.verification_checks.includes("tests/agent/001-fixture/manual-che
 assert(sentinel.evidence_notes.includes("No evidence artifact found"), "missing-artifact sentinel should be preserved as an evidence note");
 assert(sentinel.evidence_notes.includes("see linked artifact or runbook"), "runbook sentinel should be preserved as an evidence note");
 
-const nextProof = records.find((record) => record.expectation_id === "next-proof");
-assert(nextProof !== undefined, "next proof fixture record was not found");
+const nextProof = includeCoveredRecords.find((record) => record.expectation_id === "next-proof");
+assert(nextProof !== undefined, "recommended action fixture record was not found");
 assert(nextProof.verification_checks.includes("pnpm test"), "slash-separated command shorthand should include pnpm test");
 assert(nextProof.verification_checks.includes("pnpm typecheck"), "slash-separated command shorthand should include pnpm typecheck");
 assert(!nextProof.verification_checks.includes("pnpm test / pnpm typecheck"), "slash-separated command shorthand should not remain a single check");
@@ -216,6 +324,20 @@ const mapGeneration = records.find((record) => record.expectation_id === "map-ge
 assert(mapGeneration !== undefined, "map-generation fixture record was not found");
 assert(!mapGeneration.verification_checks.includes("quality-evidence map generation"), "map generation should not be a rerunnable check");
 assert(mapGeneration.evidence_notes.includes("quality-evidence map generation"), "map generation should be preserved as an evidence note");
+
+const projectRollup = records.find((record) => record.expectation_id === "project-rollup-risk");
+assert(projectRollup !== undefined, "project rollup fixture record was not found");
+assert(projectRollup.target_id === "project", "project rollup target id should be preserved");
+assert(projectRollup.evidence_notes.includes("quality-evidence project rollup aggregation"), "project rollup aggregation should be an evidence note");
+JS
+
+project_json="$("$generator" "$repo_dir" --format json --target project)"
+node - "$project_json" <<'JS'
+const records = JSON.parse(process.argv[2]);
+if (records.length !== 1 || records[0].expectation_id !== "project-rollup-risk") {
+  console.error("--target project should include the project rollup risk");
+  process.exit(1);
+}
 JS
 
 (
