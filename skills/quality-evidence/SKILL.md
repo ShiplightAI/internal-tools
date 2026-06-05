@@ -15,7 +15,8 @@ This skill is Speckit-aware but not Speckit-dependent. It works best when a
 Speckit spec provides the upstream truth; for brownfield projects, it can
 reconstruct provisional quality checks from docs, code, tests, CI, and runtime
 behavior, then mark those checks as `IMPLEMENTATION` or `INFERRED` until the
-user ratifies them.
+user ratifies them. Because it runs standalone, it is the recommended cold-start
+entry point for an un-initialized brownfield repo, before any Spec Kit scaffolding.
 
 ## Core Model
 
@@ -80,7 +81,9 @@ routes can be joined reliably.
 
 Gather only the source material needed for the target:
 
-- User-provided description, PRD, acceptance criteria, issue, or ticket text.
+- User-provided description, PRD, acceptance criteria, issue, or ticket text,
+  including external trackers (Jira, Linear, GitHub Issues) the user points to
+  via an available MCP, export, or paste.
 - Local docs: `README*`, `docs/**`, `specs/**`, `requirements/**`, `prd/**`,
   ADRs, API docs, release notes, and design docs.
 - Implementation: relevant source files, schemas, routes, jobs, migrations,

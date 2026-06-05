@@ -157,6 +157,35 @@ Not all evidence is authored the same way:
 | `default-quality-policy.md` | (maintainers) | quality-evidence | baked-in testing strategy |
 | `quality-policy.yaml` | quality-center *(deferred)* | quality-evidence | per-project testing posture override |
 
+## Brownfield onboarding
+
+Most real adopters are brownfield: PRDs, design docs, trackers, code, and tests,
+but no structured specs. The system treats this as a first-class path, not a
+fallback.
+
+- **Front door is read-only and Spec-Kit-free.** `speckit-project` Brownfield
+  Reconstruction runs without `specify init`: discover sources, propose a
+  provisional project map, and run a `quality-evidence` confidence pass. Scaffold
+  Spec Kit only after the user decides to adopt it. quality-evidence is the
+  standalone cold-start entry point.
+- **Posture is user-driven + agent-ingest.** The user supplies intent pointers
+  (PRD links, tracker queries), sets priority, and ratifies; the agent ingests
+  docs/code/tests/trackers, proposes candidates, and maps evidence. No autonomous
+  whole-repo reconstruction.
+- **Intent sources include external trackers** (Jira, Linear, GitHub Issues) via
+  an available MCP, export, or paste — recovering `SOURCE`-grade intent instead
+  of inferring it from code. Tracker items are reconciled against code: a
+  contradiction is drift to decide; a backlog ticket is intent, not current
+  behavior.
+- **Source types carry provisional truth** until ratified
+  (`SOURCE / IMPLEMENTATION / INFERRED / LEGACY`); nothing is promoted to `SOURCE`
+  without a user decision.
+
+Known brownfield gaps still open: prioritizing *where to start* (risk/churn
+ranking), distinguishing "proves intended" vs "proves current" so bug-locking
+tests don't inflate confidence, and slug stability across ratification
+split/merge.
+
 ## Design state — done / dropped / deferred
 
 | Item | State |
@@ -168,6 +197,11 @@ Not all evidence is authored the same way:
 | Schema-ownership split of map scoring fields | **dropped** — quality-evidence keeps per-feature scoring; the feature line settles it |
 | Quality Center writes `quality-policy.yaml` (policy-authoring UI) | **deferred (4b)** |
 | Shared agent⇄e2e behavioral-intent format + promotion path | **deferred (5)** |
+| Brownfield front door: read-only assessment without `specify init` | **done** |
+| External tracker ingestion (Jira/Linear/GitHub) as a discovery source | **done** |
+| Brownfield prioritization (where-to-start by risk/churn) | **deferred** |
+| Distinguish "proves intended" vs "proves current" for bug-locking tests | **deferred** |
+| Slug stability across ratification split/merge | **deferred** |
 
 When revisiting the deferred items, the open questions are: `quality-policy.yaml`
 granularity (global + per-category + per-expectation), and where the shared

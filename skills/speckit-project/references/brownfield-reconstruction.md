@@ -14,6 +14,20 @@ that as drift, not as automatic truth. Identify the conflict and ask the user to
 ratify whether the code behavior should update the spec or be changed back to
 the spec.
 
+## Operating Posture
+
+Brownfield works best as a collaboration, not autonomous reconstruction:
+
+- **User drives**: supplies intent sources (PRD/design-doc paths, tracker
+  queries), sets scope and priority (where to start), and ratifies candidates.
+- **Agent ingests**: reads docs, code, tests, and trackers; proposes candidate
+  features; maps evidence; surfaces conflicts and open questions.
+
+This runs **without Spec Kit installed**. Produce the provisional project map and
+an initial `quality-evidence` pass first; install and `specify init` only after
+the user decides to adopt Spec Kit. quality-evidence is the recommended
+cold-start entry point because it runs standalone on existing code and tests.
+
 ## Discovery Sources
 
 Read only what is needed to infer feature boundaries:
@@ -25,15 +39,20 @@ Read only what is needed to infer feature boundaries:
 - tests: unit, contract, integration, E2E, YAML, agent, CI
 - configuration: auth, billing, storage, deployment, feature flags
 - runtime behavior through browser verification when needed
+- external trackers the user points to — Jira, Linear, GitHub Issues — via an
+  available MCP, an export/CSV, or pasted ticket text. Use the user's project
+  key, team, or saved filter; do not crawl a whole tracker unprompted
 - git history or issues only when relevant and available
 
 Prefer `rg` and targeted file reads. Avoid broad context dumps.
 
 ## Reconstruction Steps
 
-1. **Inventory docs and runtime surfaces**
+1. **Gather user-named sources and priority, then inventory**
+   - Ask the user for intent sources (PRD/design-doc paths, tracker pointers) and
+     the highest-value or highest-risk area to assess first.
    - Identify product names, actors, jobs, workflows, domains, and integration
-     boundaries.
+     boundaries from those sources plus runtime surfaces.
 
 2. **Group candidate features**
    - Cluster by user workflow, route/API boundary, domain model, or test suite.
@@ -46,6 +65,10 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
    - Mark status `candidate` until ratified.
 
 4. **Record source types**
+   - `SOURCE` for endorsed intent from PRDs, design docs, or accepted tracker
+     items — but reconcile against code: a tracker item that contradicts current
+     behavior is drift to decide, and a backlog or aspirational ticket is intent,
+     not current behavior.
    - `IMPLEMENTATION` for code-backed behavior.
    - `INFERRED` for agent-derived feature boundaries.
    - `LEGACY` for behavior that appears old or compatibility-driven.

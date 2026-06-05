@@ -36,8 +36,15 @@ foundations:
      `create-tests`, `triage`, and relevant review skills.
    - Reference: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
 
-If either prerequisite is missing, stop project orchestration and help the user
-install or run the missing setup command before running the project workflow.
+These prerequisites gate **mutating** project work — creating Speckit artifacts,
+backfilling specs, or driving the feature lifecycle. They are **not** required
+for a read-only brownfield assessment: discovering docs/code/tests/trackers,
+proposing a provisional project map, and running a `quality-evidence` confidence
+pass all work without `specify init`. For an un-initialized brownfield repo, start
+with that assessment (see Brownfield Reconstruction) and install/scaffold Spec Kit
+only after the user decides to adopt it. If a mutating step is requested while a
+prerequisite is missing, stop and help the user install or run the missing setup
+first.
 
 ## Default Invocation
 
@@ -269,16 +276,28 @@ Use only for features whose spec, plan, tasks, and analyze fixes are complete.
 
 ### 7. Brownfield Reconstruction
 
-Use when a repo did not previously use Speckit.
+Use when a repo did not previously use Speckit. Runs **read-only without Spec Kit
+installed** — use it as the brownfield front door before any scaffolding.
+
+Posture: **user-driven + agent-ingest.** The user supplies intent pointers (PRD
+links, tracker queries, priorities) and ratifies; the agent ingests docs, code,
+tests, and trackers, proposes candidates, and maps evidence. Do not autonomously
+reconstruct a whole repo without the user steering scope and priority.
 
 1. Read `references/brownfield-reconstruction.md`.
-2. Discover existing docs, routes, APIs, schemas, jobs, tests, CI, and runtime
-   behavior.
-3. Group observed behavior into candidate features.
-4. Create a provisional project map with source types.
-5. Ask the user to ratify or correct feature boundaries before treating them as
+2. Ask the user for intent sources and where to start: PRD/design-doc paths,
+   tracker pointers (Jira/Linear/GitHub Issues), and the highest-value or
+   highest-risk area first.
+3. Discover existing docs, routes, APIs, schemas, jobs, tests, CI, runtime
+   behavior, and the named trackers (via MCP/export/paste when available).
+4. Group observed behavior into candidate features; record source types.
+5. Create a provisional project map; run `quality-evidence` on the priority area
+   for an initial confidence pass.
+6. Ask the user to ratify or correct feature boundaries before treating them as
    product truth.
-6. Generate or backfill Speckit feature specs for ratified features.
+7. Only after ratification and an explicit decision to adopt Spec Kit:
+   install / `specify init`, then generate or backfill Speckit specs for ratified
+   features.
 
 ## Project Map Maintenance
 
