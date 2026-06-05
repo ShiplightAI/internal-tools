@@ -260,6 +260,26 @@ Use overall confidence:
   failing.
 - `UNKNOWN`: the target could not be evaluated enough to judge.
 
+## Testing Strategy And Budget Policy
+
+Testing is always a balance against budget. Pick the most effective strategy the
+budget allows: buy sufficient confidence per check at the lowest cost, and spend
+the scarce expensive-test budget (e2e, agent) where risk is highest and cheaper
+proofs structurally cannot reach. See `assets/default-quality-policy.md` for the
+modality economics, the decision principle, the three guardrails
+(capability-before-cost, risk-floor / budget-ceiling, defense-in-depth), and the
+non-negotiable floors.
+
+Resolve the strategy posture for each check, first match wins:
+
+1. A per-expectation override in `quality-map.yaml` (one-off tuning).
+2. A project `quality-policy.yaml` at the repo root or evidence root, if present.
+3. The baked-in default in `assets/default-quality-policy.md`.
+
+Standalone-safe: if no `quality-policy.yaml` exists, use the baked-in default.
+Never require the file, and never block on its absence. The resolved posture
+governs how hard to push for evidence (strategy), not how the result is scored.
+
 ## Workflow
 
 ### 1. Resolve Target And Inputs
@@ -307,15 +327,19 @@ Find existing evidence and map it to the testing what in `quality-map.yaml`:
 
 ### 4. Analyze Gaps And Select Proofs
 
-For each weak or missing testing what, choose the cheapest sufficient proof.
-Consider confidence gained, risk severity, release or customer impact, flake risk,
+For each check, resolve its strategy posture (see Testing Strategy And Budget
+Policy), then size the gap as *required proof minus actual evidence*. Choose the
+cheapest proof **capable** of closing it — capability before cost: a unit test is
+not in the feasible set for a real-browser or third-party flow. Consider
+confidence gained, risk severity, release or customer impact, flake risk,
 runtime, fixture complexity, cleanup burden, diagnostic value, and maintenance.
 
-Prioritize gaps with risk-weighted judgment. A release-critical billing,
+Allocate the scarce expensive-test budget by risk. A release-critical billing,
 security, data isolation, or destructive-admin expectation with weak direct
-evidence should outrank many low-risk UI or display gaps.
+evidence should outrank many low-risk UI or display gaps, and may warrant
+defense-in-depth (stacked layers) rather than a single cheapest proof.
 
-Useful defaults:
+Capability map — which modalities can prove which kind of check:
 
 - Deterministic pure logic: unit tests.
 - Public boundaries, server actions, route handlers, authz, and schema
@@ -330,11 +354,25 @@ Useful defaults:
 
 ### 5. Improve Worthwhile Evidence
 
-Add or update tests and checks when they materially raise confidence. Keep edits
-scoped to tests, test fixtures, test scripts, reports, and minimal support code
-needed for testability. Do not add brittle tests merely to increase count.
+Drive each under-covered check up to its resolved posture, honoring the
+non-negotiable floors (unit coverage on core/changed logic; at least one gate on
+every release-critical check) regardless of budget. Add or update tests when they
+materially raise confidence; do not add brittle tests merely to increase count.
 Classify low-value or unavailable checks as implicit, deferred, blocked, or not
 measured with a reason.
+
+Push, do not just record:
+
+- **Code-tied tests** (unit, contract, integration, api): author them inline, or
+  emit `fix-prompts` to push the base coding agent toward deep, high-coverage
+  tests on the highest-risk gaps. Keep edits scoped to tests, fixtures, test
+  scripts, and minimal support code needed for testability.
+- **Behavioral tests** (e2e, agent): delegate authoring to the producer skills
+  (`create-tests`, `create-agent-tests`) per Specialized Test Authoring, then
+  record the resulting evidence.
+- When budget forces a check to stop short of its ideal proof, record the chosen
+  allocation and the **residual risk knowingly accepted** in `residual_risk` /
+  `next_best_proof`; never under-test silently.
 
 ### 6. Run Verification
 
@@ -541,6 +579,11 @@ For the full starter, copy `assets/test-report-template.md`.
   auditable evidence.
 - Prefer product-language summaries with technical details preserved in evidence
   fields.
+- Resolve testing strategy from the policy chain (per-expectation override →
+  `quality-policy.yaml` → baked-in `assets/default-quality-policy.md`). Treat the
+  resolved posture as a push target for evidence, never as a quality score.
+- Stay standalone-safe: never require `quality-policy.yaml`; fall back to the
+  baked-in default when it is absent.
 
 ## When Not To Use
 
