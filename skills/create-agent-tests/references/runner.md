@@ -1,16 +1,17 @@
-# Agent Tests
+# Agent Test Runner
 
-Agent tests are coding-agent-driven browser or live-environment checks used
-when a workflow needs flexible inspection before it is stable enough for a
-fully deterministic E2E test.
+Reference for `run-agent-verification.ts`, the orchestrator that executes agent
+test cases and enforces the report status contract. The `create-agent-tests`
+skill covers when and how to author cases; this file covers running them.
 
-## Installed Files
+## Scaffolded Files
 
-The shared installer can scaffold these files into a workspace:
+When a project adopts agent tests, the `create-agent-tests` skill copies these
+starters from its own bundle (`<skill-dir>/assets/`) into the repo:
 
 - `tests/agent/agent-test-template.md`: case authoring template
 - `tests/agent/agent-test-suites.example.json`: manifest example
-- `quality-evidence/run-agent-verification.ts`: local runner/orchestrator
+- `tests/agent/run-agent-verification.ts`: local runner/orchestrator
 
 Each project owns its real `tests/agent/agent-test-suites.json`, case files,
 fixtures, secrets, session bootstrap, CI wiring, and mutation policy.
@@ -22,13 +23,10 @@ Add a package script in the target repo, adjusted for its package manager:
 ```json
 {
   "scripts": {
-    "agent:verify": "tsx quality-evidence/run-agent-verification.ts"
+    "agent:verify": "tsx tests/agent/run-agent-verification.ts"
   }
 }
 ```
-
-If the repo already uses the legacy `test-quality/` root and the installer put
-the runner there, use `tsx test-quality/run-agent-verification.ts` instead.
 
 Create a real manifest from the example:
 

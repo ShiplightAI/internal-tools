@@ -397,65 +397,38 @@ evidence actually covers them.
 
 ## Specialized Test Authoring
 
-When the project has a specialized local test-authoring workflow, use it for
-implementation details rather than inventing tests directly. For example, use a
-project's established browser, E2E, YAML, mobile, load, migration, or contract
-test workflow to create, update, validate, and run those tests. Then map the
-resulting specs, test files, command output, and run artifacts back into this
-skill's `quality-map.yaml`, coverage matrix, and test report.
+This skill assesses and records evidence; it delegates test creation to producer
+skills and project workflows rather than inventing tests directly. Use the
+established workflow for the test kind, then map the resulting specs, test files,
+command output, and run artifacts back into this skill's `quality-map.yaml`,
+coverage matrix, and test report.
 
-## Agent Test Authoring
+- `create-tests`: deterministic Shiplight YAML E2E tests (Playwright + agentic
+  SDK).
+- `create-agent-tests`: coding-agent-driven Markdown cases for live-environment
+  verification (browser, API, DB, logs, cloud, telemetry).
+- The project's own browser, mobile, load, migration, contract, or unit test
+  workflow for other kinds.
 
-Use agent tests when verification requires flexible, tool-driven judgment across
-UI, API, database, logs, files, network, or live-environment state, and when a
+## Recording Agent Test Evidence
+
+Agent tests are coding-agent-driven Markdown cases that verify live-environment
+behavior across UI, API, database, logs, files, network, and telemetry when a
 deterministic test would be premature, brittle, too expensive, or too narrow.
+This skill does not author them. To create, scaffold, or run agent tests, use
+the `create-agent-tests` skill (or the project's local `tests/agent/` convention
+when one exists).
 
-Agent tests are especially useful for:
+When an agent test produces a report, record it here:
 
-- UI changes that require visual, interactive, browser-console, network, or
-  trace verification.
-- API and DB workflows where confidence requires live requests plus persisted
-  state inspection.
-- Full-stack flows that cross frontend, backend, storage, jobs, external mocks,
-  and cleanup.
-- Exploratory regression checks before converting stable paths into standard
-  unit, contract, integration, E2E, or YAML tests.
-
-Agent tests are not a replacement for deterministic tests. Prefer converting
-high-value stable agent flows to the project's standard automated test format
-later.
-
-Before authoring an agent test, check for `tests/agent/agent-test-template.md`.
-If it exists, treat it as the authoritative local convention. Do not rediscover
-or replace it through broad search unless the user explicitly asks to update the
-local convention.
-
-If no local convention exists and an agent test is the cheapest sufficient
-proof, scaffold from the installed internal assets:
-
-- `tests/agent/agent-test-template.md`
-- `tests/agent/agent-test-suites.example.json`
-- `quality-evidence/run-agent-verification.ts`
-
-If those files have not been installed but the internal skill bundle is
-available, use the bundled sources under `files/tests/agent/`:
-
-- `files/tests/agent/agent-test-template.md`
-- `files/tests/agent/agent-test-suites.example.json`
-- `files/tests/agent/run-agent-verification.ts`
-- `files/tests/agent/README.md`
-
-Each repo owns its real `tests/agent/agent-test-suites.json`, actual case files
-under `tests/agent/<feature>/`, fixture setup commands, auth/session bootstrap,
-CI wiring, engine secrets and MCP config, staging/production mutation policies,
-and cleanup ownership.
-
-Agent reports should use the local runner/report convention when present. Map
-the report path, final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and evidence
-artifacts such as HTML reports, screenshot sets, videos, or traces back into
-`quality-evidence/<target>/quality-map.yaml` and
-`quality-evidence/<target>/test-report.md`. Text-only browser claims are not
-sufficient evidence.
+- Map the report path, the final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and
+  evidence artifacts (HTML reports, screenshot sets, videos, traces, logs) into
+  `quality-evidence/<target>/quality-map.yaml` and
+  `quality-evidence/<target>/test-report.md`.
+- Treat `ABORTED` as an orchestration interruption to rerun, not as product
+  evidence.
+- Text-only browser claims are not sufficient evidence; require an auditable
+  artifact for browser-driven cases.
 
 ## Artifact Skeletons
 
@@ -477,6 +450,8 @@ Use these sections unless the repo has a better local convention.
 ## Report Expectations
 ## Coverage Notes
 ```
+
+For the full starter, copy `assets/test-spec-template.md`.
 
 `quality-map.yaml`:
 
@@ -547,6 +522,8 @@ use `assets/quality-map.schema.json`.
 ## Cleanup
 ## Coverage Summary
 ```
+
+For the full starter, copy `assets/test-report-template.md`.
 
 ## Operating Rules
 

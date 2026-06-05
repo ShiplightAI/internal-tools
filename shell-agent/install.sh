@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ ! -f "$SOURCE_DIR/shell-agent" || ! -f "$SOURCE_DIR/shell-agent.sh" ]]; then
-  echo "error: install.sh must be run from the files/shell-agent directory" >&2
+  echo "error: install.sh must be run from the shell-agent directory" >&2
   exit 1
 fi
 

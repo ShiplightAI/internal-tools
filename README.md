@@ -13,13 +13,18 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
 | `speckit-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, brownfield reconstruction, and feature lifecycle sequencing. |
 | `quality-evidence` | Assess and improve quality evidence for a project or feature, map coverage depth, run verification, add worthwhile tests/checks, and write owner-facing confidence reports. |
-| `quality-evidence/test-spec-template.md` | Shared template for feature-level testing contracts. |
-| `quality-evidence/test-report-template.md` | Shared template for feature-level testing reports. |
-| `tests/agent/agent-test-template.md` | Shared template for coding-agent-driven browser/live-env tests. |
-| `tests/agent/agent-test-suites.example.json` | Example manifest for grouping agent test cases into runnable suites. |
-| `tests/agent/README.md` | Setup and configuration guide for the agent test runner and manifest. |
-| `quality-evidence/run-agent-verification.ts` | Configurable runner for executing agent test suites and enforcing the report status contract. |
-| `files/shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
+| `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
+| `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
+
+Skills bundle their own starter assets and copy them into a target repo on
+demand, so there is nothing extra to install:
+
+- `quality-evidence/assets/`: quality-map template and schema, plus
+  test-spec/report templates.
+- `create-agent-tests/assets/`: the `run-agent-verification.ts` runner, the
+  agent-test case template, and an example suites manifest, with runner setup
+  documented in `create-agent-tests/references/runner.md`. These are copied into
+  `tests/agent/` when a project adopts agent tests.
 
 ## Install
 
@@ -54,16 +59,7 @@ CLI can use when cloning `ShiplightAI/internal-agent-skills`.
 npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill speckit-project -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill quality-evidence -a codex -y
-```
-
-## Install Repo-Local Files
-
-Direct `skills add` installs the agent skills. To also copy the shared
-`quality-evidence/` and `tests/agent/` starter files into a target repo, run the
-installer from that repo:
-
-```bash
-gh api -H "Accept: application/vnd.github.raw" repos/ShiplightAI/internal-agent-skills/contents/install.sh | bash -s -- -a codex -y
+npx skills add ShiplightAI/internal-agent-skills --skill create-agent-tests -a codex -y
 ```
 
 ## Speckit Project Prerequisites
@@ -75,21 +71,19 @@ skills installed.
 - Spec Kit: https://github.com/github/spec-kit/blob/main/README.md
 - Shiplight agent skills and MCP: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
 
-Note: `quality-evidence/test-spec-template.md`,
-`quality-evidence/test-report-template.md`,
-`quality-evidence/run-agent-verification.ts`,
-`tests/agent/agent-test-template.md`,
-`tests/agent/agent-test-suites.example.json`, and `tests/agent/README.md` are
-installed whenever `install.sh` runs, because they are repo-local assets rather
-than `skills` skills. Each target repo still owns its real
+Note: the `create-agent-tests` starter assets (the `run-agent-verification.ts`
+runner, the agent-test case template, and the example suites manifest) ship
+inside that skill's bundle under `skills/create-agent-tests/assets/`. The skill
+copies them into a target repo's `tests/agent/` only when a project adopts agent
+tests; there is no separate install step. Each target repo still owns its real
 `tests/agent/agent-test-suites.json`, case files, fixtures, auth/session
 bootstrap, CI wiring, engine secrets, MCP config, and environment mutation
 policies.
 
 `quality-evidence` replaces the earlier `test-quality` skill name. Existing
 projects that already use `test-quality/` evidence artifacts can keep that
-directory until they explicitly migrate; the installer preserves that convention
-when `test-quality/` already exists and `quality-evidence/` does not.
+directory until they explicitly migrate; the skill preserves that convention when
+`test-quality/` already exists and `quality-evidence/` does not.
 
 ## Update
 
@@ -100,7 +94,7 @@ Re-run the same install command from the target project repo.
 Install the `??` integration:
 
 ```bash
-files/shell-agent/install.sh
+shell-agent/install.sh
 ```
 
 Then open a new shell, or source it immediately:
