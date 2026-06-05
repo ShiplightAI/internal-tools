@@ -1,6 +1,6 @@
 ---
 name: auto-pr
-description: Create a PR against the repo's base branch, run a local pre-review, then wait for the Claude bot review, fix critical issues, and merge
+description: Create a PR against the repo's base branch, run a local pre-review, then wait for the Claude bot review, fix critical issues, merge, and reflect on durable lessons into AGENTS.md
 user_invocable: true
 ---
 
@@ -87,6 +87,13 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
    - If merge fails due to branch protections, inform the user
    - Return the merged PR URL
 
+10. **Reflect** (post-merge, optional but preferred):
+    - If `reflect` is in the available skills list, invoke it via the Skill tool after a successful merge: `Skill(skill="reflect")`
+    - It harvests durable knowledge from this session — user corrections, rejected approaches, review findings — reconciles it against the relevant `AGENTS.md` files by scope, and presents proposed updates for the user to approve
+    - Most PRs teach nothing worth recording; a "nothing to capture" result is normal and fine
+    - The reflect skill owns the user-approval gate for any `AGENTS.md` change — do not apply edits here
+    - If the skill is unavailable or errors out, skip it — the merge already succeeded
+
 ## Important
 
 - The base branch is resolved once at the start (see "Resolving the base branch") — use the resolved `<BASE>` consistently for `git fetch`, `git rebase`, `gh pr create --base`, and the diff/log commands. Never assume `main` or `staging`.
@@ -96,5 +103,6 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
 - For a deeper **standalone** review outside the PR flow (effort levels, saving a ranked round-N report, multi-round reconciliation), use the `code-review-run` skill.
 - When invoking the local skill, do NOT pass `--comment`; act on findings in-conversation rather than duplicating comments on the PR (the bot does that)
 - The Claude bot posts as issue comments, NOT PR reviews — use `/issues/` API not `/pulls/.../reviews`
+- Reflection (step 10) runs only after a successful merge and never blocks it; it proposes `AGENTS.md` updates but applies none without user approval
 - Keep commit messages clean and professional
 - Never auto-commit uncommitted changes — ask the user first
