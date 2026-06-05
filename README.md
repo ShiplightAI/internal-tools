@@ -5,6 +5,10 @@ Private Shiplight agent assets for internal development workflows.
 This repository intentionally contains internal-only skills and prompts. Public
 Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 
+> **Design philosophy & global architecture:** see [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+> for how Spec Kit, `speckit-project`, `quality-evidence`, the test producers, and
+> Quality Center compose — and the principles behind the boundaries.
+
 ## Included Assets
 
 | Asset | Purpose |
@@ -12,7 +16,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
 | `speckit-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, brownfield reconstruction, and feature lifecycle sequencing. |
-| `quality-evidence` | Assess and improve quality evidence for a project or feature, map coverage depth, run verification, add worthwhile tests/checks, and write owner-facing confidence reports. |
+| `quality-evidence` | Assess and improve quality evidence for a project or feature, map coverage depth, run verification, add worthwhile tests/checks, and write user-facing confidence reports. |
 | `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
 | `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
 
