@@ -1,14 +1,14 @@
 # Project Map Reference
 
 Use the project map as the project-level graph that connects product intent,
-feature specs, implementation artifacts, and evidence. It is an index and
-traceability artifact, not a replacement for PRDs, specs, tasks, code, or
-quality maps.
+feature specs, project proof posture, implementation artifacts, and evidence.
+It is an index and traceability artifact, not a replacement for PRDs, specs,
+policies, tasks, code, or quality maps.
 
 Write the map as a product-language summary first and a traceability graph
 second. Names, summaries, release area descriptions, feature descriptions, and
 concern notes should explain capabilities, workflows, outcomes, and quality
-state without requiring knowledge of repository layout. Put technical details in
+risk or proof posture without requiring knowledge of repository layout. Put technical details in
 source refs, artifact paths, code refs, evidence refs, source types, statuses,
 and discovery fields.
 
@@ -29,6 +29,7 @@ Maintain this authority model:
 ```text
 PRD / roadmap: project intent
 project-map.yaml: project graph and traceability
+quality-policy.yaml: project proof-strategy guidance
 spec.md: feature truth
 plan.md / tasks.md: execution contract
 code: implementation artifact
@@ -66,6 +67,8 @@ project-specific fields only when they have a clear consumer.
 Important fields:
 
 - `project`: identity, source docs, and product-language summary.
+- `project.quality_policy_path`: canonical project proof-strategy artifact, when
+  used.
 - `product_docs`: PRD, roadmap, architecture docs, release notes.
 - `roadmap`: milestones, release areas, and feature order.
 - `active_feature`: current working pointer.

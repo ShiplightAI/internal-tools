@@ -39,6 +39,9 @@ blocked, and which residual risks remain after applying the feature test spec.
 | --- | --- | --- |
 | `<command>` | `PASS` / `FAIL` / `BLOCKED` / `SKIPPED` | <summary> |
 
+Include any prerequisite or artifact-producing commands that later checks
+relied on.
+
 ## Coverage Matrix
 
 Use statuses consistently: `COVERED`, `PARTIAL`, `IMPLICIT`, `NOT COVERED`,

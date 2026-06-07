@@ -2,6 +2,7 @@
 
 **Feature**: `<feature-directory-name>`
 **Source of truth**: [spec.md](./spec.md)
+**Quality policy**: [../../quality-policy.yaml](../../quality-policy.yaml)
 **Test report**: [test-report.md](./test-report.md)
 
 This file defines the durable testing contract for this feature: what needs
@@ -68,6 +69,8 @@ stakeholder confidence goals that matter for trusting this feature.
   ```bash
   # Add focused unit, contract, integration, e2e, script, typecheck, or lint
   # commands that are useful diagnostics for this test case.
+  # Include the full reproducible command chain when later checks depend on a
+  # prerequisite or artifact-producing step.
   ```
 - Steps:
   1. <Action the executor performs through API, DB, UI, browser, logs, script,
@@ -169,6 +172,9 @@ values.
 - Put blocking failures first in `## Findings` or `## Deferred / Residual Risk`.
 - Record commands run, evidence collected, cleanup performed, and resources
   intentionally left behind.
+- If a test case depends on a prerequisite or artifact-producing step, include
+  that command in the automated check list instead of only mentioning it as a
+  precondition.
 - Never include passwords, API keys, cookies, tokens, database URLs, or raw
   secret fixture payloads.
 
@@ -177,6 +183,8 @@ values.
 - Map every important testing what to at least one selected evidence strategy.
 - If an automated test already covers a case, include the exact command to run
   it and the expected pass signal.
+- If later evidence relies on a prerequisite or prepared state, include the full
+  command chain needed to reproduce it from a clean checkout.
 - If a case cannot be automated, specify how an agent, human, telemetry query,
   or live-env check can verify it.
 - If a case depends on environment capabilities, keep the test case portable and

@@ -13,25 +13,29 @@ trap cleanup EXIT
 
 mkdir -p "${repo_dir}/quality-evidence/001-fixture"
 
+cat > "${repo_dir}/quality-policy.yaml" <<'YAML'
+name: Fixture policy
+summary: Shared proof posture for the fixture repo.
+defaults:
+  preferred_modalities: [unit, contract, integration]
+  minimum_depth: INDIRECT
+  require_direct_evidence: false
+rules:
+  - id: release-critical-floor
+    when:
+      min_risk_weight: 5
+    minimum_depth: DIRECT
+    require_direct_evidence: true
+    require_gate: true
+YAML
+
 cat > "${repo_dir}/quality-evidence/001-fixture/quality-map.yaml" <<'YAML'
-schema_version: 1
 target:
   id: 001-fixture
   name: Fixture Feature
   scope: feature
   source_refs:
     - path: specs/001-fixture/spec.md
-assessment:
-  updated_at: 2026-06-01T00:00:00Z
-  branch: main
-  commit: abc123
-  generated_by: quality-evidence
-  overall_status: PARTIAL
-  overall_confidence: HIGH
-scoring_model:
-  formula: Feature score aggregates the per-expectation weighted confidence; a
-    failing or stale check lowers the displayed confidence and can set
-    overall_status to FAIL.
 expectations:
   - id: covered-context
     title: Covered context should not become a prompt
@@ -40,82 +44,18 @@ expectations:
     priority: P0
     risk:
       weight: 5
-      rationale: Important but already covered.
+      rationale: Important and already structurally covered.
     evidence:
       - id: covered-context-test
         type: integration
         path: tests/covered-context.test.ts
         command: pnpm test tests/covered-context.test.ts
         depth: DIRECT
-        ci_gated: true
         reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: Current automated evidence covers the core local behavior; remaining browser, live, provider, telemetry, or scale gaps are tracked in the browser/live expectation.
-      next_best_proof: null
-  - id: skipped-result
-    title: Skipped result is not current pass evidence
-    source_type: SOURCE
-    category: other
-    priority: P1
-    risk:
-      weight: 4
-      rationale: Skipped checks leave the behavior unproven.
-    evidence:
-      - id: skipped-result-test
-        type: integration
-        path: tests/skipped-result.test.ts
-        command: pnpm test tests/skipped-result.test.ts
-        depth: DIRECT
-        ci_gated: true
-        reliability: STRONG
-        latest_result:
-          status: SKIPPED
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: ""
-      next_best_proof: null
-  - id: covered-stale-cache
-    title: Covered stale-cache wording should not become stale evidence
-    source_type: SOURCE
-    category: security
-    priority: P0
-    risk:
-      weight: 5
-      rationale: Hyphenated technical terms must not create false stale risks.
-    evidence:
-      - id: covered-stale-cache-proof
-        type: integration
-        path: tests/stale-cache-covered.test.ts
-        command: pnpm test tests/stale-cache-covered.test.ts
-        depth: DIRECT
-        ci_gated: true
-        reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: The stale-cache boundary is covered by direct integration evidence.
-      next_best_proof: null
+        contexts: [pr-ci]
+
   - id: sentinel-command
-    title: Missing artifact sentinel is not a runnable check
+    title: Missing evidence should preserve notes and linked paths
     source_type: SOURCE
     category: ops
     priority: P2
@@ -125,31 +65,18 @@ expectations:
     evidence:
       - id: sentinel-command-evidence
         type: other
-        path: ""
         command: No evidence artifact found
         depth: MISSING
-        ci_gated: false
-        reliability: UNKNOWN
-        latest_result:
-          status: NOT RUN
       - id: linked-runbook-evidence
         type: manual
         path: tests/agent/001-fixture/manual-check.md
         command: see linked artifact or runbook
         depth: MANUAL
-        ci_gated: false
         reliability: MODERATE
-        latest_result:
-          status: NOT RUN
-    evaluation:
-      coverage_status: DEFERRED
-      confidence: LOW
-      breadth: MISSING
-      depth: MISSING
-      freshness: UNKNOWN
-      weighted_confidence: LOW
-      residual_risk: The current evidence artifact is not attached.
-      next_best_proof: Attach or rerun the agent verification artifact.
+    proof_gap:
+      summary: The current evidence artifact is not attached.
+      next_step: Attach or author the missing verification artifact.
+
   - id: next-proof
     title: Explicit recommended action is actionable
     source_type: SOURCE
@@ -164,46 +91,12 @@ expectations:
         path: tests/next-proof.test.ts
         command: pnpm test / pnpm typecheck
         depth: DIRECT
-        ci_gated: true
         reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: COVERED
-      confidence: HIGH
-      breadth: STRONG
-      depth: STRONG
-      freshness: FRESH
-      weighted_confidence: HIGH
-      residual_risk: Browser-only behavior is still worth checking before release.
-      next_best_proof: Run the browser verification suite.
-  - id: map-generation-note
-    title: Quality map generation is an evidence note
-    source_type: SOURCE
-    category: other
-    priority: P2
-    risk:
-      weight: 2
-      rationale: Generated maps must tell agents what to rerun.
-    evidence:
-      - id: map-generation-evidence
-        type: static
-        path: quality-evidence/001-fixture/quality-map.yaml
-        command: quality-evidence map generation
-        depth: DIRECT
-        ci_gated: true
-        reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: PARTIAL
-      confidence: MEDIUM
-      breadth: MODERATE
-      depth: MODERATE
-      freshness: FRESH
-      weighted_confidence: MEDIUM
-      residual_risk: Generated map still depends on a feature-level gap.
-      next_best_proof: null
+        contexts: [local]
+    proof_gap:
+      summary: Browser-only behavior is still worth checking before release.
+      next_step: Run the browser verification suite.
+
   - id: docs-only-source-snapshot
     title: Docs-only source snapshot still needs runtime proof
     source_type: SOURCE
@@ -216,26 +109,29 @@ expectations:
       - id: docs-only-source-snapshot-proof
         type: static
         path: specs/001-fixture/spec.md
-        command: Documentation-baseline review
         depth: STATIC
-        ci_gated: false
         reliability: STRONG
-        latest_result:
-          status: PASS
-    evaluation:
-      coverage_status: PARTIAL
-      confidence: MEDIUM
-      breadth: WEAK
-      depth: WEAK
-      freshness: FRESH
-      weighted_confidence: MEDIUM
-      residual_risk: Documentation alignment alone does not prove runtime behavior works correctly in running environments.
-      next_best_proof: Keep the documented source of truth updated in the same change whenever behavior changes, and rely on the feature's runtime behavior checks for release readiness.
-gap_summary:
-  release_blockers: []
-  high_risk_gaps: []
-  stale_or_flaky_evidence: []
-  deferred_items: []
+
+  - id: policy-gap
+    title: Local-only proof does not satisfy declared proof posture
+    source_type: SOURCE
+    category: data
+    priority: P1
+    risk:
+      weight: 4
+      rationale: Data-sensitive checks should be provable in a gate context.
+    policy_override:
+      required_contexts: [pr-ci]
+      require_gate: true
+      notes: Require a CI gate for this expectation.
+    evidence:
+      - id: policy-gap-proof
+        type: integration
+        path: tests/policy-gap.test.ts
+        command: pnpm test tests/policy-gap.test.ts
+        depth: DIRECT
+        reliability: STRONG
+        contexts: [local]
 YAML
 
 json_output="$("$generator" "$repo_dir" --format json)"
@@ -253,13 +149,11 @@ function assert(condition, message) {
   }
 }
 
-assert(!ids.includes("covered-context"), "covered/high residual context should not generate a prompt");
-assert(!ids.includes("covered-stale-cache"), "stale-cache wording should not generate a stale prompt");
-// skipped-result and sentinel-command both appear after the multiline scoring_model
-// scalar, so their presence also proves multiline-scalar parsing stays intact.
-assert(ids.includes("skipped-result"), "SKIPPED latest_result should generate a prompt");
+assert(!ids.includes("covered-context"), "directly covered expectation should not generate a default prompt");
 assert(ids.includes("sentinel-command"), "missing evidence should generate a prompt");
-assert(!ids.includes("next-proof"), "covered/high next_best_proof should not generate a default prompt");
+assert(ids.includes("next-proof"), "open proof_gap should generate a prompt");
+assert(ids.includes("docs-only-source-snapshot"), "static-only proof should generate a proof-upgrade prompt");
+assert(ids.includes("policy-gap"), "policy override gaps should generate a prompt");
 
 const sentinel = records.find((record) => record.expectation_id === "sentinel-command");
 assert(sentinel !== undefined, "sentinel fixture record was not found");
@@ -269,28 +163,33 @@ assert(sentinel.verification_checks.includes("tests/agent/001-fixture/manual-che
 assert(sentinel.evidence_notes.includes("No evidence artifact found"), "missing-artifact sentinel should be preserved as an evidence note");
 assert(sentinel.evidence_notes.includes("see linked artifact or runbook"), "runbook sentinel should be preserved as an evidence note");
 
-const nextProof = includeCoveredRecords.find((record) => record.expectation_id === "next-proof");
+const nextProof = records.find((record) => record.expectation_id === "next-proof");
 assert(nextProof !== undefined, "recommended action fixture record was not found");
+assert(nextProof.closure_mode === "proof_gap", "open proof gap should use proof_gap closure mode");
 assert(nextProof.verification_checks.includes("pnpm test"), "slash-separated command shorthand should include pnpm test");
 assert(nextProof.verification_checks.includes("pnpm typecheck"), "slash-separated command shorthand should include pnpm typecheck");
 assert(!nextProof.verification_checks.includes("pnpm test / pnpm typecheck"), "slash-separated command shorthand should not remain a single check");
-
-const mapGeneration = records.find((record) => record.expectation_id === "map-generation-note");
-assert(mapGeneration !== undefined, "map-generation fixture record was not found");
-assert(!mapGeneration.verification_checks.includes("quality-evidence map generation"), "map generation should not be a rerunnable check");
-assert(mapGeneration.evidence_notes.includes("quality-evidence map generation"), "map generation should be preserved as an evidence note");
+assert(nextProof.recommended_action.includes("Run the browser verification suite"), "proof_gap next_step should become the recommended action");
 
 const docsOnly = records.find((record) => record.expectation_id === "docs-only-source-snapshot");
 assert(docsOnly !== undefined, "docs-only source snapshot fixture record was not found");
 assert(docsOnly.closure_mode === "proof_upgrade", "docs-only source snapshot should require a proof upgrade");
-assert(docsOnly.closure_condition.includes("stronger direct passing proof"), "docs-only source snapshot should state the stronger-proof closure condition");
-assert(docsOnly.non_closing_changes.some((item) => item.includes("Refreshing or reframing the current weak, manual, static, or indirect evidence")), "docs-only source snapshot should warn that reframing weak evidence is not sufficient");
-assert(docsOnly.recommended_action.includes("Add stronger direct passing proof"), "docs-only source snapshot should replace maintenance guidance with a closure-aligned recommended action");
-assert(!docsOnly.recommended_action.includes("Keep the documented source of truth updated"), "docs-only source snapshot should not keep the maintenance-only next_best_proof as the recommended action");
+assert(docsOnly.closure_condition.includes("stronger direct proof"), "docs-only source snapshot should state the stronger-proof closure condition");
+assert(docsOnly.non_closing_changes.some((item) => item.includes("weak, manual, static, or indirect evidence")), "docs-only source snapshot should warn that reframing weak evidence is not sufficient");
+assert(docsOnly.recommended_action.includes("Add stronger direct proof"), "docs-only source snapshot should recommend stronger direct proof");
 assert(docsOnly.prompt.includes("Closure condition on next scan:"), "prompt should include the closure condition section");
 assert(docsOnly.prompt.includes("Changes that do not count as success by themselves:"), "prompt should include the non-closing changes section");
-assert(docsOnly.prompt.includes("Recommended action: Add stronger direct passing proof"), "prompt should surface the closure-aligned recommended action");
 assert(docsOnly.prompt.includes("treat this task as complete only if the next scan stops reporting this quality check as open"), "prompt should define success in terms of the next scan result");
+
+const policyGap = records.find((record) => record.expectation_id === "policy-gap");
+assert(policyGap !== undefined, "policy-gap fixture record was not found");
+assert(policyGap.closure_mode === "policy_gap", "policy override mismatch should use policy_gap closure mode");
+assert(policyGap.problem.includes("required contexts missing: pr-ci"), "policy gap should explain the missing required context");
+assert(policyGap.problem.includes("gate-capable proof context"), "policy gap should explain the missing gate context");
+assert(policyGap.source_of_truth_inputs.includes("quality-policy.yaml"), "repo-root quality-policy.yaml should be a source-of-truth input");
+
+const coveredContext = includeCoveredRecords.find((record) => record.expectation_id === "covered-context");
+assert(coveredContext !== undefined, "--include-covered should include expectations without open proof gaps");
 JS
 
 target_json="$("$generator" "$repo_dir" --format json --target 001-fixture)"

@@ -1,10 +1,10 @@
 # Default Quality Policy (Guideline)
 
-> **Status: placeholder.** This is the baked-in default testing strategy for
-> quality-evidence. It encodes expert judgment, not hard rules. We will revisit
-> it with real examples and may extract a machine-readable `quality-policy.yaml`
-> override later. Until then, treat this as guidance for *how to allocate
-> testing effort*, not a checklist to satisfy.
+> This is the baked-in default testing strategy for `quality-evidence`.
+> It encodes expert judgment, not hard rules. Projects can override it with a
+> checked-in `quality-policy.yaml` when they need a different proof posture.
+> Treat it as guidance for *how to allocate testing effort*, not a checklist to
+> satisfy.
 
 ## North Star
 
@@ -67,9 +67,10 @@ Everything above the floors is budget-optimized by the decision principle.
 ## Reporting Obligation
 
 When budget forces a check to stop short of its ideal proof, **state the
-allocation chosen and the residual risk knowingly accepted** in
-`residual_risk` / `next_best_proof` and the test report. Honest "here's what we
-didn't buy and why" is the signal stakeholders need — silent under-testing is not.
+allocation chosen and the residual proof gap knowingly accepted** in
+`proof_gap.summary` / `proof_gap.next_step` and the test report. Honest "here's
+what we didn't buy and why" is the signal stakeholders need — silent
+under-testing is not.
 
 ## Risk Weight → Effort (rough default, revisit)
 

@@ -1,209 +1,474 @@
 # Architecture & Design Philosophy
 
-This document records the global design behind Shiplight's spec-driven quality
-system — how the pieces fit, who owns what, and *why* the boundaries are where
-they are. It spans several repos; keep it current when the boundaries move.
+This document records the current architecture for Shiplight's spec-driven
+quality system: what each layer owns, which artifacts are static versus
+temporal, and how release decisions are derived.
 
-> This is the "so we don't forget" document. Individual skills describe *how* to
-> do their job; this describes *how the jobs compose*.
+It spans several repos. Keep it current when the boundaries move.
+
+> This is the composition document, not an implementation guide.
+> Individual skills explain how to do their job. This document explains how
+> those jobs fit together.
+
+## North star
+
+The system is built around four distinct concerns:
+
+1. **Structural definition**
+   - Shared, reviewed, checked into git.
+   - Same for everyone on the same commit.
+   - Defines what the product is, what must be proven, and any human-authored
+     guidance for how hard to push for proof.
+2. **Observations**
+   - Dynamic run outcomes from executing proofs in a context.
+   - Different across developers, CI lanes, environments, and time.
+3. **Evaluations**
+   - Derived judgments produced from structural definition + observations.
+   - Grounded on a specific subject, context, commit, and timestamp.
+4. **Portfolio views**
+   - Aggregated release and organizational views built from evaluations.
+
+The key boundary:
+
+- `project-map.yaml`, `quality-map.yaml`, and `quality-policy.yaml` are
+  structural artifacts.
+- Pass/fail state, freshness, and readiness are not authored into those files.
+- They are derived from observations.
+
+## Core vocabulary
+
+| Term | Meaning |
+| --- | --- |
+| **Subject** | The thing being judged: feature, release area, project, or another named product slice. |
+| **Expectation** | A product behavior, invariant, or quality promise that must be proven. |
+| **Proof definition** | A structural declaration of what evidence counts and how it relates to an expectation. |
+| **Observation** | The outcome of exercising a proof definition in a context at a point in time. |
+| **Context** | A single stable label for where or why an observation was produced, for example `local`, `pr-ci`, `staging-gate`, or `prod-smoke`. |
+| **Policy** | Human-authored proof-strategy guidance that steers `quality-evidence` on what kinds of proof to push for and how hard to push. |
+| **Evaluation** | A derived judgment for a subject in a context at a commit and time. |
+| **Readiness** | An evidence-based decision outcome derived from evaluations, not a field handwritten into a map. |
+
+Use `subject` and `context` consistently:
+
+- `subject` answers: "what are we judging?"
+- `context` answers: "under which decision lane are we judging it?"
+
+Do not overload `target` to mean both.
 
 ## The system at a glance
 
 | Layer / actor | Repo | Role |
 | --- | --- | --- |
-| **Spec Kit** | `github/spec-kit` (upstream) | SDD engine. Turns intent into English artifacts (spec → plan → tasks) and gates their *quality* (`checklist`, `analyze`). Stops at "artifacts are coherent enough to build." |
-| **speckit-project** | `internal-agent-skills` | Project-level orchestrator. PRD/roadmap, `project-map.yaml` traceability, feature breakdown, active-feature selection, brownfield reconstruction. Sequences Spec Kit → verify → quality-evidence → review. |
-| **quality-evidence** | `internal-agent-skills` | Per-feature quality **ledger / strategist / pusher / exporter**. Defines what must be proven, risk-weights it, picks the testing strategy within budget, pushes producers to author evidence, records it in `quality-map.yaml`, writes confidence reports. |
-| **Producers** | mixed (see below) | Author executable evidence. Code-tied tests, `create-agent-tests`, `create-tests` (e2e), manual/telemetry. |
-| **Quality Center** | `quality-center` | Cross-feature **judge / aggregator**. Ingests the maps, scores and weights features, supports review and adjustment, and produces the portfolio view for release go/no-go decisions. |
-| Supporting | both | `verify`, `code-review-run`, `auto-pr`. |
+| **Spec Kit** | `github/spec-kit` (upstream) | SDD engine. Turns intent into English artifacts such as `spec.md`, `plan.md`, and `tasks.md`. Gates the quality of those artifacts, not the built software. |
+| **speckit-project** | `internal-agent-skills` | Project-level orchestrator. Maintains `project-map.yaml`, release areas, feature graph, active feature selection, and brownfield reconstruction. |
+| **quality-evidence** | `internal-agent-skills` | Per-feature proof-definition strategist. Defines what must be proven, reads proof-strategy guidance, maintains `quality-map.yaml` and `test-spec.md`, pushes producers to create evidence, and may export local observations when it runs checks. |
+| **Producers** | mixed | Author and execute evidence: code-tied tests, `create-agent-tests`, `create-tests`, manual checks, telemetry queries, and similar mechanisms. |
+| **Observation exporters** | mixed | Normalize raw producer outcomes into observation records keyed by evidence id, context, commit, and timestamp. |
+| **Quality Center** | `quality-center` | Evaluation engine and portfolio judge. Ingests structural artifacts and observations, derives evidence-based evaluation snapshots with transparent built-in rules, and supports release decisions. |
+| Supporting | both | `verify`, `code-review-run`, `auto-pr`, and project-specific CI workflows. |
 
-## The traceability spine
+## Traceability spine
 
-Every artifact descends from product intent and traces back to it (the
-`speckit-project` backbone):
+Every artifact still descends from product intent, but the current design separates static truth
+from dynamic results:
 
 ```text
-PRD / roadmap        project intent
-project-map.yaml     project graph + traceability
-spec.md              feature truth        ── FR-### / SC-### ──┐
-plan.md / tasks.md   execution contract                       │ derive
-code                 implementation artifact                  │
-quality-map.yaml     evidence + confidence  ◄── quality checks ┘
-test-report.md       user-facing confidence report
+PRD / roadmap         project intent
+project-map.yaml      project graph + release graph
+spec.md               feature truth          ── FR-### / SC-### ──┐
+plan.md / tasks.md    execution contract                         │ derive
+code                  implementation artifact                    │
+quality-map.yaml      proof definition per feature ◄─────────────┘
+quality-policy.yaml   proof-strategy guidance for authoring
+
+proof execution in a context
+        ↓
+observations
+        ↓
+structural definition + observations
+        ↓
+evaluations
+        ↓
+Quality Center / release decisions / reports
 ```
 
-Quality checks in `quality-map.yaml` derive from the spec's functional
-requirements (FR-###) and *buildable* success criteria (SC-###). That FR/SC link
-is the seam between the English-artifact world and the executable-evidence world.
+The seam between the English-artifact world and the executable-evidence world
+is still the feature expectation. What changed is where temporal state and
+judgment live.
 
 ## End-to-end flow
 
 ```text
-        ┌─────────────────────────── speckit-project (orchestrator) ───────────────────────────┐
-        │                                                                                       │
-   PRD ─┤  Spec Kit:  constitution → specify → plan → tasks → implement                         │
-        │             gates: checklist (requirements quality) · analyze (cross-artifact)        │
-        │                              │ spec FR/SC                          │ code              │
-        │                              ▼                                     ▼                   │
-        │  quality-evidence (per feature): what must be proven · risk weight · strategy ·        │
-        │     push producers · record evidence · feature-level confidence                        │
-        │        │ delegates authoring                         │ writes                          │
-        │        ▼                                             ▼                                 │
-        │  ┌───────────────┬──────────────────┬──────────────┐  quality-map.yaml ──┐             │
-        │  code-tied tests   create-agent-tests   create-tests   test-report.md     │ flows up    │
-        │  (unit/integ/      (agent tests,        (codified e2e)                    │             │
-        │   contract/api)     live-env)            Shiplight YAML)                  ▼             │
-        └───────────────────────────────────────────────────────────────► Quality Center ───────┘
-                                                                            (score · weight ·
-            quality-policy.yaml ◄──────────────────────────────────────────  release decisions)
-                            flows down (deferred: 4b)
+        ┌──────────────────────────── speckit-project ────────────────────────────┐
+        │                                                                          │
+   PRD ─┤  Spec Kit: constitution → specify → plan → tasks → implement            │
+        │              gates: checklist · analyze                                 │
+        │                               │ spec FR/SC               │ code/tests   │
+        │                               ▼                          ▼              │
+        │  quality-evidence: expectations · risk · proof strategy · structural    │
+        │  quality map · push producers                                            │
+        │        │ delegates authoring                         │ writes            │
+        │        ▼                                             ▼                   │
+        │  ┌───────────────┬──────────────────┬──────────────┐  quality-map.yaml   │
+        │  code-tied tests   create-agent-tests   create-tests  test-spec.md       │
+        │  manual checks     telemetry queries    CI jobs                         │
+        └───────────────────────────────────────────────────────────────────────────┘
+                             ▲
+                     quality-policy.yaml
+                             │ authoring guidance
+                             ▼
+                      quality-evidence
+                             │ execution / export
+                             ▼
+                         observations
+                             │
+                             ▼
+                    Quality Center / evaluator
+             (transparent derivation · evaluation · release readiness)
+                             │
+                             ▼
+                   evaluation snapshots / reports / portfolio views
 ```
+
+## Component boundaries
+
+### 1. Structural definition
+
+Structural artifacts are stable, reviewed, and commit-addressable.
+
+They should answer:
+
+- What product slices exist?
+- What expectations must be proven?
+- What evidence counts as proof?
+- What human guidance should steer proof posture?
+
+They must not answer:
+
+- Did the proof pass today?
+- Is the evidence fresh right now?
+- Is the feature ready for staging at this moment?
+
+#### `project-map.yaml`
+
+Owns:
+
+- project identity and summary
+- release areas and feature graph
+- feature dependencies
+- canonical artifact paths
+- cross-feature concerns
+- policy/profile references for release areas or other subjects
+
+Must not own:
+
+- current pass/fail state
+- current confidence
+- freshness
+- release readiness
+
+#### `quality-map.yaml`
+
+Owns:
+
+- feature-scoped expectations
+- risk weight and rationale
+- proof definitions
+- evidence metadata such as modality, depth, path, command, and reliability
+- structural notes about missing or preferred proofs
+
+Must not own time-sensitive run outcomes or derived readiness judgments.
+
+`quality-map.yaml` defines the proof graph, not the current score.
+
+#### `quality-policy.yaml`
+
+Owns:
+
+- project or team proof posture
+- modality preferences and minimum proof floors
+- guidance for which contexts matter for which kinds of checks
+- required or preferred gating posture for higher-risk expectations
+- project-specific overrides to the default testing strategy
+
+Policy is static and checked in. It is primarily an authoring contract for
+`quality-evidence`.
+
+### 2. Observations
+
+Observations are dynamic records created when a proof definition is exercised.
+
+Each observation should be keyed strongly enough to answer:
+
+- which evidence definition ran
+- in which context
+- for which commit or artifact version
+- when it ran
+- what happened
+- where the supporting artifacts live
+
+Examples:
+
+- local unit run by a developer
+- PR CI browser lane
+- staging gate run
+- production smoke run
+- manual verification record
+- telemetry query snapshot
+
+Observations are not shared structural truth. Two developers on different
+branches can have different local observations for the same structural map, and
+that is expected.
+
+Observations should be machine-generated whenever possible. Manual and telemetry
+inputs still need normalized observation records.
+
+### 3. Evaluations
+
+Evaluations are derived snapshots, not authored facts.
+
+An evaluation joins:
+
+- structural definition
+- one or more observations
+
+An evaluation must always be grounded by:
+
+- `subject`
+- `context`
+- `commit` or equivalent build identity
+- `evaluated_at`
+- references to the input observations
+
+Evaluations can then produce:
+
+- coverage status
+- confidence
+- freshness
+- residual risk
+- readiness / gate result
+- actionable explanations for which gaps or failures drove the result
+
+This is the level a release decision maker should read.
+
+Evaluation is evidence-based and transparent. Quality Center may inspect
+structural proof guidance to explain expected-versus-observed gaps, but the
+system does not require a separate user-authored evaluation-policy artifact or
+scoring DSL.
+
+### 4. Portfolio views
+
+Portfolio and release views are built from evaluation snapshots, not from
+hand-authored map status fields.
+
+These views support:
+
+- feature readiness by context
+- release-area readiness by context
+- cross-feature risk concentration
+- stale evaluation detection
+- evidence gap prioritization
+- go / no-go release decisions
+
+## Ownership model
+
+### Spec Kit
+
+Owns product intent artifacts:
+
+- `spec.md`
+- `plan.md`
+- `tasks.md`
+
+It does not prove the built software works.
+
+### speckit-project
+
+Owns the project graph and release graph:
+
+- `project-map.yaml`
+- feature breakdown
+- release areas
+- active feature coordination
+
+It does not author run outcomes.
+
+### quality-evidence
+
+Owns per-feature proof-definition strategy:
+
+- derive expectations from product truth
+- pick proof posture
+- maintain `quality-map.yaml`
+- maintain `test-spec.md`
+- push producers to author the needed evidence
+
+It may export observations gathered during a session, but those observations are
+session outputs, not canonical checked-in map fields.
+
+### Producers
+
+Own executable proof:
+
+- unit, integration, contract, API, E2E, agent, manual, telemetry, static
+
+Their job is to produce or execute proof and expose artifacts that can be
+normalized into observations.
+
+### Quality Center
+
+Owns derived judgment and portfolio visibility:
+
+- ingest structural maps and observations
+- produce evaluations
+- aggregate across features and release areas
+- surface release decisions and adjustment levers
+
+Quality Center is the judge, not the source of structural truth.
+
+## File-as-interface
+
+The layers exchange files, not runtime calls:
+
+- `project-map.yaml`, `quality-map.yaml`, and `quality-policy.yaml` flow from
+  authoring layers to the quality system.
+- observations flow from producers and runners to evaluators.
+- evaluations flow from evaluators to dashboards, reports, and release
+  decision-makers.
+
+Either side should remain usable without the others present:
+
+- `quality-evidence` must stay standalone-safe when Quality Center is absent.
+- Quality Center must be able to evaluate whatever structural artifacts and
+  observations are available without invoking authoring tools directly.
 
 ## Core design principles
 
-These are the reusable ideas. When in doubt, conform to them.
+### 1. Static truth vs. dynamic truth
 
-### 1. English artifacts vs. executable evidence
-Spec Kit's quality gates validate *requirements* — `checklist` is "unit tests for
-English" (is the spec well-written?) and `analyze` is cross-artifact consistency.
-They never prove the built software works. That second job — risk-weighted,
-executable proof — is the quality layer (`quality-evidence` + producers +
-Quality Center). The two worlds meet at FR/SC.
+Do not commit time-sensitive state into structural maps.
 
-### 2. Ledger / producers / judge
-Three jobs, kept separate:
-- **Ledger / strategist** (`quality-evidence`) decides what to prove, picks the
-  cheapest capable strategy, pushes for evidence, and records it. It does **not**
-  author specialized tests and does **not** score across features.
-- **Producers** author evidence and hand back a normalized evidence record.
-- **Judge** (`quality-center`) aggregates and scores across features to support
-  release go/no-go decisions.
+If a fact changes because a new run happened, it belongs in an observation or an
+evaluation, not in a checked-in proof-definition file.
 
-The smell that drove this split: agent-test authoring once lived *inside*
-quality-evidence while e2e had its own skill. Producers are now symmetric.
+### 2. One context dimension
 
-### 3. The feature line
-The dividing line between `quality-evidence` and `quality-center` is the feature
-boundary:
-- **Within a feature** (per-check evaluation *and* the feature-level rollup:
-  `overall_status`, `overall_confidence`, `weighted_confidence`) → quality-evidence.
-  It owns this because per-check judgment requires having read the check, the
-  tests, and the code — context a static aggregator cannot reconstruct.
-- **Across features** (aggregating feature scores, weighting feature vs. feature,
-  thresholds, release go/no-go, and weight adjustment) → quality-center.
+Use one stable `context` label rather than splitting origin and environment into
+multiple required axes.
 
-### 4. File-as-interface (no runtime coupling)
-The two systems exchange files, not calls:
-- `quality-map.yaml` **flows up** — quality-evidence writes, quality-center reads (facts).
-- `quality-policy.yaml` **flows down** — quality-center writes, quality-evidence reads (control). *(deferred: 4b)*
+Examples:
 
-Either side runs without the other present.
+- `local`
+- `pr-ci`
+- `staging-gate`
+- `prod-smoke`
 
-### 5. Convention-with-override (everywhere)
-The same pattern recurs: a producer proposes an expert default grounded in local
-understanding; a higher layer overrides it with business priority.
-- **risk weight** — quality-evidence proposes intrinsic severity → Quality Center re-weights for release priority.
-- **testing posture** — baked-in `default-quality-policy.md` → project `quality-policy.yaml` → per-expectation override in the map (first match wins).
-- **templates** — Spec Kit's project override → preset → core default.
+If a project later needs richer decomposition, it can add metadata inside the
+observation record. The primary evaluation key should still be a single context
+id.
 
-### 6. Testing economics, not test count
-Optimize **justified confidence per unit of cost**. Cheap tests are narrow;
-expensive tests are thorough. Pick the cheapest modality *capable* of proving a
-check; ration the expensive budget (e2e, agent) by risk. Guardrails:
-**capability-before-cost**, **risk sets a floor / budget flexes only the
-ceiling**, **defense-in-depth at the top**. Floors that budget can never
-undercut: unit coverage on core/changed logic, and ≥1 gate on every
-release-critical check. Full guideline:
-[`skills/quality-evidence/assets/default-quality-policy.md`](./skills/quality-evidence/assets/default-quality-policy.md)
-(placeholder — revisit with real examples).
+### 3. Proof definition is not proof outcome
 
-### 7. Evidence has three axes
-Don't conflate them:
-- **Modality** — unit / contract / integration / e2e / agent / manual / telemetry / static.
-- **Depth** (directness) — DIRECT / INDIRECT / STATIC / IMPLICIT / MISSING / BLOCKED.
-- **Reliability** (determinism) — STRONG / MODERATE / WEAK / FLAKY.
+Do not conflate:
 
-Manual and agent tests are *observed/judgment* proofs: they can be DIRECT on a
-behavior but rank lower on reliability. Behavioral proof hardens along a ladder
-of rising determinism: **manual → agent test → codified e2e**. Promotion =
-walking right along it.
+- modality
+- depth
+- reliability
+- result status
 
-### 8. Standalone-safe / Speckit-aware-not-dependent
-Each layer degrades gracefully. quality-evidence works on a brownfield repo with
-no Spec Kit spec (marking checks `INFERRED`/`IMPLEMENTATION`), and with no
-`quality-policy.yaml` (falling back to the baked-in default). Nothing in the
-quality layer may *require* Spec Kit or Quality Center to function.
+`reliability` is a property of the proof definition, not a fallback pass/fail
+field.
 
-## The producer trichotomy
+### 4. Authoring policy is first-class
 
-Not all evidence is authored the same way:
+Evidence posture is not just "write more tests."
 
-| Bucket | Modalities | Authoring | Home |
+Human input is needed to steer `quality-evidence` on:
+
+- where to spend expensive evidence budget
+- which modalities to prefer
+- what minimum proof floor high-risk checks require
+- which contexts are important enough to pursue
+- where defense-in-depth is expected
+
+Without this guidance, proof-pushing becomes ad hoc and inconsistent.
+
+### 5. Evaluation should be transparent, not policy-tuned
+
+Quality Center should derive judgments from the visible structural proof graph
+and the visible observation set.
+
+Users should be able to inspect:
+
+- which expectations exist
+- which proofs were defined
+- which observations passed or failed
+- which gaps remain
+
+Prefer explicit evidence and transparent built-in derivation rules over
+score-tuning knobs.
+
+### 6. Evaluation is contextual
+
+There is no single globally meaningful current outcome snapshot for a feature.
+
+Different questions require different contexts:
+
+- "Is my branch locally healthy?"
+- "Did the PR gate pass?"
+- "Is staging ready for release?"
+- "Did production smoke stay green after deploy?"
+
+The system must answer those separately.
+
+### 7. Release decisions must be replayable
+
+A release decision should be explainable later from recorded inputs.
+
+That means an evaluation snapshot must preserve:
+
+- subject
+- context
+- commit
+- evaluator version or derivation version
+- observation references
+- evaluated timestamp
+
+### 8. Standalone-safe and brownfield-safe
+
+The quality layer must still work in brownfield repos and partial-adoption
+states:
+
+- no Spec Kit required to start
+- no Quality Center required to author structural maps
+- no `quality-policy.yaml` required if a default policy exists
+
+But partial adoption should degrade the certainty of evaluations, not blur the
+boundaries between structural artifacts and temporal outputs.
+
+## Artifact roles
+
+| Artifact | Written by | Consumed by | Role |
 | --- | --- | --- | --- |
-| **Engine producers** | agent, e2e | specialized skill | `create-agent-tests`, `create-tests` (public `agent-skills`) |
-| **Generic-authored** | unit, integration, contract, api | base coding agent + native framework | *no skill* — strategy & pushing governed by quality-evidence |
-| **Recorded-only** | manual, telemetry, static | not authored | recorded into the map by quality-evidence |
-
-## Key artifacts
-
-| Artifact | Written by | Consumed by | Purpose |
-| --- | --- | --- | --- |
-| `spec.md` (FR/SC) | Spec Kit / speckit-project | quality-evidence | feature truth; source of quality checks |
-| `project-map.yaml` | speckit-project | speckit-project, dashboards | project graph + traceability |
-| `quality-map.yaml` | quality-evidence | quality-center, fix-prompts | per-feature evidence graph + confidence (release signal) |
-| `test-spec.md` | quality-evidence | quality-evidence, review | durable "testing what" contract |
-| `test-report.md` | quality-evidence | release go/no-go, gap-fixing | user-facing confidence report: overview (release decision) + detail (gaps to fix) |
-| `default-quality-policy.md` | (maintainers) | quality-evidence | baked-in testing strategy |
-| `quality-policy.yaml` | quality-center *(deferred)* | quality-evidence | per-project testing posture override |
+| `spec.md` | Spec Kit / speckit-project | quality-evidence | feature truth |
+| `project-map.yaml` | speckit-project | quality-evidence, Quality Center, dashboards | structural project and release graph |
+| `quality-map.yaml` | quality-evidence | Quality Center, fix-prompts, review | structural proof-definition graph |
+| `quality-policy.yaml` | maintainers / project owners / future tools | quality-evidence | structural proof-strategy guidance |
+| observation records | producers / exporters / CI / local runs | Quality Center, reports | temporal proof outcomes |
+| evaluation records | Quality Center / evaluator | dashboards, release decisions, reports | derived readiness snapshots |
+| `test-spec.md` | quality-evidence | review, producers | durable testing contract |
+| `test-report.md` | evaluator or export workflow | humans | human-readable evaluation snapshot for a subject and context |
 
 ## Brownfield onboarding
 
-Most real adopters are brownfield: PRDs, design docs, trackers, code, and tests,
-but no structured specs. The system treats this as a first-class path, not a
-fallback.
+Brownfield remains first-class:
 
-- **Front door is read-only and Spec-Kit-free.** `speckit-project` Brownfield
-  Reconstruction runs without `specify init`: discover sources, propose a
-  provisional project map, and run a `quality-evidence` confidence pass. Scaffold
-  Spec Kit only after the user decides to adopt it. quality-evidence is the
-  standalone cold-start entry point.
-- **Posture is user-driven + agent-ingest.** The user supplies intent pointers
-  (PRD links, tracker queries), sets priority, and ratifies; the agent ingests
-  docs/code/tests/trackers, proposes candidates, and maps evidence. No autonomous
-  whole-repo reconstruction.
-- **Intent sources include external trackers** (Jira, Linear, GitHub Issues) via
-  an available MCP, export, or paste — recovering `SOURCE`-grade intent instead
-  of inferring it from code. Tracker items are reconciled against code: a
-  contradiction is drift to decide; a backlog ticket is intent, not current
-  behavior.
-- **Source types carry provisional truth** until ratified
-  (`SOURCE / IMPLEMENTATION / INFERRED / LEGACY`); nothing is promoted to `SOURCE`
-  without a user decision.
+- reconstruct `project-map.yaml` from docs, code, trackers, and repo shape
+- derive `quality-map.yaml` from accepted or provisional feature truth
+- map existing tests and checks to proof definitions
+- export observations from whatever runs already exist
+- derive evaluations from the available evidence with explicit proof posture and
+  explicit uncertainty
 
-Known brownfield gaps still open: prioritizing *where to start* (risk/churn
-ranking), distinguishing "proves intended" vs "proves current" so bug-locking
-tests don't inflate confidence, and slug stability across ratification
-split/merge.
-
-## Design state — done / dropped / deferred
-
-| Item | State |
-| --- | --- |
-| Extract agent-test authoring into `create-agent-tests` (sibling to `create-tests`) | **done** |
-| Slim quality-evidence to ledger/strategist/exporter | **done** |
-| Testing strategy + budget policy + pusher wired into quality-evidence | **done** |
-| `default-quality-policy.md` baked-in default | **done (placeholder — revisit with real examples)** |
-| Schema-ownership split of map scoring fields | **dropped** — quality-evidence keeps per-feature scoring; the feature line settles it |
-| Quality Center writes `quality-policy.yaml` (policy-authoring UI) | **deferred (4b)** |
-| Shared agent⇄e2e behavioral-intent format + promotion path | **deferred (5)** |
-| Brownfield front door: read-only assessment without `specify init` | **done** |
-| External tracker ingestion (Jira/Linear/GitHub) as a discovery source | **done** |
-| Brownfield prioritization (where-to-start by risk/churn) | **deferred** |
-| Distinguish "proves intended" vs "proves current" for bug-locking tests | **deferred** |
-| Slug stability across ratification split/merge | **deferred** |
-
-When revisiting the deferred items, the open questions are: `quality-policy.yaml`
-granularity (global + per-category + per-expectation), and where the shared
-behavioral-intent lives (Spec Kit `specs/tests/`, quality-evidence `test-spec.md`,
-or a new artifact keyed by expectation id).
+Brownfield reconstruction must not promote observed behavior to canonical truth
+without ratification.

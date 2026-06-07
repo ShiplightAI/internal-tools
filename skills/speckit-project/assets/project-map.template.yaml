@@ -1,9 +1,8 @@
-schema_version: 1
-
 project:
   id: "<project-slug>"
   name: "<Project Name>"
   summary: "<Product-language project summary>"
+  quality_policy_path: "quality-policy.yaml"
   source_refs:
     - path: "README.md"
       label: "Project README"
@@ -72,7 +71,6 @@ cross_feature_concerns:
 
 discovery:
   mode: "greenfield"
-  last_scanned_at: null
   source_types:
     - "SOURCE"
     - "IMPLEMENTATION"

@@ -1,5 +1,3 @@
-schema_version: 1
-
 target:
   id: "001-example-feature"
   name: "<Display target name>"
@@ -8,26 +6,6 @@ target:
   source_refs:
     - path: "<path/to/spec-or-prd.md>"
       label: "<optional source label>"
-
-assessment:
-  updated_at: "<ISO-8601 timestamp>"
-  branch: "<branch-or-unknown>"
-  commit: "<git-sha-or-unknown>"
-  generated_by: "quality-evidence"
-  overall_status: "UNKNOWN" # PASS | FAIL | PARTIAL | BLOCKED | NOT RUN | DEFERRED | ABORTED | UNKNOWN
-  overall_confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
-
-scoring_model:
-  risk_scale: "1=low, 3=important, 5=release-critical"
-  factors:
-    - "risk_weight"
-    - "breadth"
-    - "depth"
-    - "latest_result"
-    - "reliability"
-    - "freshness"
-    - "ci_gating"
-  note: "Scores are decision aids; preserve the underlying evidence and residual-risk rationale."
 
 expectations:
   - id: "<stable-expectation-id>"
@@ -49,34 +27,28 @@ expectations:
         path: "<path/to/tasks.md>"
         status: "unknown" # planned | in_progress | done | deferred | blocked | unknown
 
+    policy_override:
+      preferred_modalities: [] # Optional: unit | contract | integration | e2e | agent | manual | telemetry | static | smoke | script | other
+      discouraged_modalities: [] # Optional: modalities to avoid unless no better option exists
+      required_modalities: [] # Optional: modalities that must appear in the proof set
+      required_contexts: [] # Optional: ["local", "pr-ci", "staging-gate"]
+      minimum_depth: "DIRECT" # Optional: DIRECT | INDIRECT | STATIC | MANUAL | IMPLICIT
+      require_direct_evidence: false # Optional: direct proof is required
+      require_multi_layer: false # Optional: combine multiple proof layers for this check
+      require_gate: false # Optional: at least one proof should be suitable for a gate context
+      notes: "<Optional per-check proof-strategy override>"
+
     evidence:
       - id: "<stable-evidence-id>"
         type: "integration" # unit | contract | integration | e2e | agent | manual | telemetry | static | smoke | script | other
-        path: "<test-or-report-path>"
-        command: "<command used to run or verify this evidence>"
+        path: "<test-or-proof-path>"
+        url: "<optional dashboard, runbook, or external reference>"
+        command: "<command used to author or run this proof>"
         depth: "DIRECT" # DIRECT | INDIRECT | STATIC | MANUAL | IMPLICIT | MISSING | BLOCKED
-        ci_gated: false
         reliability: "UNKNOWN" # STRONG | MODERATE | WEAK | FLAKY | UNKNOWN
-        latest_result:
-          status: "NOT RUN" # PASS | FAIL | PARTIAL | BLOCKED | SKIPPED | NOT RUN | DEFERRED | ABORTED | UNKNOWN
-          run_at: "<ISO-8601 timestamp or null>"
-          commit: "<git-sha-or-unknown>"
-          artifacts:
-            - path: "<optional-report-screenshot-trace-or-dashboard-path>"
-              kind: "report" # report | screenshot | video | trace | dashboard | log | other
+        contexts: ["local"] # Contexts where this proof is intended to run or matter
+        notes: "<Optional structural note about this proof definition>"
 
-    evaluation:
-      coverage_status: "NOT COVERED" # COVERED | PARTIAL | IMPLICIT | NOT COVERED | NOT MEASURED | MANUAL | BLOCKED | DEFERRED
-      confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
-      breadth: "WEAK" # STRONG | MODERATE | WEAK | MISSING | UNKNOWN
-      depth: "WEAK" # STRONG | MODERATE | WEAK | MISSING | UNKNOWN
-      freshness: "UNKNOWN" # FRESH | ACCEPTABLE | STALE | UNKNOWN
-      weighted_confidence: "UNKNOWN" # HIGH | MEDIUM | LOW | UNKNOWN
-      residual_risk: "<What remains unproven, weakly proven, stale, or environment-dependent>"
-      next_best_proof: "<Highest-value follow-up evidence, or null if none>"
-
-gap_summary:
-  release_blockers: []
-  high_risk_gaps: []
-  stale_or_flaky_evidence: []
-  deferred_items: []
+    proof_gap:
+      summary: "<What proof is still missing, weak, deferred, or intentionally not bought yet>"
+      next_step: "<Highest-value next proof to add, or null if none>"

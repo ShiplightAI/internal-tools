@@ -69,6 +69,7 @@ Maintain this hierarchy:
 ```text
 PRD / roadmap: project intent
 project-map.yaml: project graph and traceability
+quality-policy.yaml: project proof-strategy guidance
 spec.md: feature truth
 plan.md / tasks.md: execution contract
 code: implementation artifact
@@ -118,6 +119,8 @@ Prefer existing repo conventions. If none exist, use:
 - `.specify/project-map.yaml`: project graph for Spec Kit repos.
 - `project-map.yaml`: acceptable top-level alternative when the web UI or repo
   conventions prefer a visible root artifact.
+- `quality-policy.yaml`: project-wide proof-strategy guidance for
+  `quality-evidence`.
 - `specs/NNN-feature-name/`: feature-level Speckit artifacts.
 - `quality-evidence/<feature>/`: quality evidence for a feature.
 
@@ -138,7 +141,7 @@ and use `assets/project-map.template.yaml` directly.
 Project maps should be readable as product-language summaries before they are
 used as traceability graphs. Write project, release area, feature, and concern
 names/descriptions in terms of product capabilities, workflows, outcomes, and
-quality state. Put technical detail in refs, artifact paths, source types,
+risk or proof posture. Put technical detail in refs, artifact paths, source types,
 statuses, discovery metadata, and evidence links.
 
 ## Source Types
@@ -169,14 +172,16 @@ PRD, feature breakdown, and project map; it does not replace the Spec Kit
 3. Create `docs/feature-breakdown.md` with numbered features, dependencies,
    MVP/release areas, and quality focus.
 4. Create `.specify/project-map.yaml` or `project-map.yaml`.
-5. Verify the project constitution establishes specification authority:
+5. Create `quality-policy.yaml` when the project already knows recurring proof
+   posture decisions that differ from the baked-in default.
+6. Verify the project constitution establishes specification authority:
    - specs are source of truth
    - code is artifact
    - tests/reviews/reports are evidence
    - specs are current snapshots, not history logs
    - behavior changes require spec reconciliation
    - unresolved drift requires user clarification
-6. If the constitution is missing or weak on these points, run
+7. If the constitution is missing or weak on these points, run
    `speckit-constitution` before feature execution.
 
 ### 2. Roadmap And Feature Breakdown
@@ -306,6 +311,8 @@ Keep the map useful as both a product summary and traceability index:
 - Record product-language project, release area, feature, and concern summaries
   alongside feature IDs, statuses, dependencies, source refs, spec paths, code
   refs, evidence refs, and residual risks.
+- Keep `project.quality_policy_path` aligned with the canonical repo policy file
+  when the project uses one.
 - Use `roadmap.release_areas` for product-language release areas: logical groups
   of feature IDs that should be judged together for readiness. They are not
   filesystem directories, feature scopes, git branches, or deployment gates
@@ -367,6 +374,9 @@ unresolved.
 
 Use `quality-evidence` to create or update
 `quality-evidence/<feature>/quality-map.yaml` for each feature.
+
+Use repo-root `quality-policy.yaml` when project owners want recurring
+proof-strategy guidance to apply across many features.
 
 Do not produce a project-scope quality map. The project map links to each
 feature's quality map, and project-level quality is an aggregate of those maps.

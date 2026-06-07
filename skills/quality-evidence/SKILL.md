@@ -31,18 +31,23 @@ Separate testing into two layers:
 Quality evidence is not test count. Optimize for justified confidence per unit
 of cost, stability, latency, diagnostic value, and maintenance.
 
-Represent quality as an evidence graph:
+Represent the checked-in quality map as a static proof-definition graph:
 
 ```text
-quality check -> task/implementation -> test intent -> executable evidence ->
-latest result -> weighted evaluation -> evidence gap / recommended action
+quality check -> task/implementation -> test intent -> proof definition ->
+proof gap / recommended action
 ```
 
-Each quality check should carry an impact weight before evaluating tests.
-Evidence should then be judged by breadth, depth, latest result, reliability,
-freshness, and whether it is CI/release gated. Do not weight every test equally.
-Use evidence gaps to describe the concrete difference between the check and the
-current evidence. Use recommended actions to say what would close the gap.
+Each quality check should carry an impact weight before selecting proof.
+Evidence definitions should capture breadth, depth, reliability, intended
+contexts, and whether proof is direct, indirect, implicit, missing, or blocked.
+Do not weight every test equally. Use proof gaps to describe the concrete
+difference between the desired proof posture and the current proof definition.
+Use recommended actions to say what proof to add next.
+
+Run outcomes, freshness, and current confidence do not belong in
+`quality-map.yaml`. Record those in `test-report.md` and downstream
+observation/evaluation artifacts.
 
 ## Scope Resolution
 
@@ -99,14 +104,14 @@ Do not invent requirements. Distinguish `SOURCE` quality checks from
 
 Create or update these artifacts:
 
+- Project-wide when recurring proof-strategy decisions need to be explicit:
+  `quality-policy.yaml`
 - Per target: `quality-evidence/<target-slug>/test-spec.md`
 - Per target: `quality-evidence/<target-slug>/quality-map.yaml`
 - Per target: `quality-evidence/<target-slug>/test-report.md`
 
-For new projects, use `quality-evidence/`. For existing repos that already use
-the legacy `test-quality/` root, continue updating that root unless the user
-explicitly asks to migrate. Do not create parallel `quality-evidence/` and
-`test-quality/` evidence trees for the same target.
+Use repo-root `quality-policy.yaml` as the canonical project policy location.
+Use `quality-evidence/` for per-target artifacts.
 
 If the repo has another obvious existing convention for quality evidence
 artifacts, use that convention only when it clearly fits, but keep the canonical
@@ -120,6 +125,11 @@ longer narrative summaries. When creating a new map, copy and fill
 `assets/quality-map.template.yaml`. When tooling or validation is available,
 validate against `assets/quality-map.schema.json`.
 
+When project-specific proof posture needs to be shared across features, create
+or update repo-root `quality-policy.yaml` from
+`assets/quality-policy.template.yaml` and validate against
+`assets/quality-policy.schema.json`.
+
 ## Quality Map
 
 Maintain `quality-map.yaml` around quality checks, not test files. The current
@@ -132,24 +142,54 @@ include:
 - Category and priority.
 - Impact/risk weight from 1 to 5 with rationale.
 - Related implementation tasks when available.
-- Evidence entries for unit, contract, integration, E2E, agent, manual,
+- Optional per-check policy override when the default proof posture is wrong for
+  this check.
+- Evidence definitions for unit, contract, integration, E2E, agent, manual,
   telemetry, static, smoke, script, or project-specific checks.
-- Latest result status, command or artifact path, commit/timestamp when known,
-  and whether the evidence is CI/release gated.
-- Evaluation fields: coverage status, confidence, breadth, depth, freshness,
-  weighted confidence, residual risk, and next best proof. Treat residual risk
-  as the gap impact, and next best proof as the recommended action.
+- Evidence-definition metadata such as path or URL, command, depth,
+  reliability, intended contexts, and structural notes.
+- Optional proof-gap guidance describing what proof is still missing and which
+  proof should be added next.
 
-Use the map for agent handoff, UI visualization, release gates, trend analysis,
-and gap prioritization. Preserve the input fields behind any confidence
-judgment so scoring formulas can evolve without losing the audit trail.
+Use the map for agent handoff, UI visualization, structural gap prioritization,
+and proof-planning. Preserve stable ids and proof definitions so downstream
+observation and evaluation systems can join on them. Keep the map structural:
+proof definitions, proof posture, and proof gaps belong here; time-sensitive run
+outcomes and derived judgments do not.
+
+## Quality Policy
+
+Use `quality-policy.yaml` for project-wide proof-strategy guidance that should
+apply across many expectations. It is a structural authoring artifact, not a
+scorecard.
+
+Keep the policy lean and actionable. It should answer:
+
+- which modalities the project prefers or avoids by default
+- which expectations need direct proof, multi-layer proof, or a gate
+- which contexts matter enough to pursue for recurring kinds of checks
+- what non-negotiable proof floors apply to high-risk work
+
+The policy contract has five parts:
+
+- `contexts`: stable labels such as `local`, `pr-ci`, or `staging-gate`
+- `defaults`: the base proof posture when no narrower rule applies
+- `rules`: targeted overrides keyed by risk, category, priority, source type, or
+  target id
+- `modality_guidance`: human explanation of when a modality is strong or weak
+- `guardrails` / `floors`: persistent project guidance for scarce-test-budget
+  decisions
+
+Per-expectation `policy_override` in `quality-map.yaml` narrows or overrides the
+project policy for a single expectation. Use it for local exceptions, not as a
+replacement for a recurring project rule.
 
 ## Product-Language Check Writing
 
 Dashboards may render `title`, `description`, `risk.rationale`,
-`evaluation.residual_risk`, and `evaluation.next_best_proof` directly, so write
-those fields as product-language summaries first. Use the existing schema; do
-not add free-form keys that fail validation.
+`proof_gap.summary`, and `proof_gap.next_step` directly, so write those fields
+as product-language summaries first. Use the existing schema; do not add
+free-form keys that fail validation.
 
 - `title`: name the product behavior or quality promise the check proves. Do not
   name only a command, artifact, or test file.
@@ -157,15 +197,16 @@ not add free-form keys that fail validation.
   release confidence it affects.
 - `risk.rationale`: state the quality, user, operational, data, security,
   billing, or release consequence if the check is not proven.
-- `evaluation.residual_risk`: describe only the open gap or current limitation.
-  Put history in evidence artifacts or the Markdown report unless essential.
-- `evaluation.next_best_proof`: write the recommended action that closes the
-  gap. If there is no open gap, write the maintenance proof.
+- `proof_gap.summary`: describe only the structural proof gap or current
+  limitation. Put run history in reports or observation artifacts unless
+  essential.
+- `proof_gap.next_step`: write the highest-value proof to add next. If there is
+  no open gap, omit `proof_gap` rather than writing maintenance chatter.
 
-Put paths, commands, test names, commits, and artifacts in `source_refs`,
-`evidence.path`, `evidence.command`, and `latest_result.artifacts`. Keep
-`SOURCE` product promises, `IMPLEMENTATION`-observed checks, and `INFERRED`
-checks visibly distinct in title and description.
+Put paths, commands, test names, dashboard links, and proof notes in
+`source_refs`, `evidence.path`, `evidence.url`, `evidence.command`, and
+`evidence.notes`. Keep `SOURCE` product promises, `IMPLEMENTATION`-observed
+checks, and `INFERRED` checks visibly distinct in title and description.
 
 Documentation-baseline checks should stay compact and secondary. If a target
 includes a check that says the current docs/specs/contracts are aligned, keep it
@@ -179,9 +220,9 @@ to a lightweight baseline:
 - Do not let the documentation-baseline check carry the main coverage story for
   the feature. Runtime behavior, data rules, browser flows, provider behavior,
   and release gating should be described by separate feature-behavior checks.
-- `evaluation.next_best_proof` for a documentation-baseline check should usually
-  be a maintenance action or a pointer to the real runtime proof still needed,
-  not the primary readiness conclusion for the feature.
+- `proof_gap.next_step` for a documentation-baseline check should usually point
+  to the real runtime proof still needed, not become the primary readiness
+  conclusion for the feature.
 
 ## Generate Fix Prompts
 
@@ -212,13 +253,14 @@ Useful options:
 
 Relative `--output` paths are resolved under `<repo-root>`.
 
-The script scans `quality-evidence/**/quality-map.yaml` and
-`test-quality/**/quality-map.yaml`. It uses quality-map target ids and names for
-affected feature/spec identity; do not infer feature ownership from test file
-names. Each prompt separates source-of-truth inputs from verification checks so
-the fixing agent knows what to read versus what to run. The bundled helper is
-TypeScript plus a bash launcher only; do not introduce Python or another language
-for this workflow.
+The script scans `quality-evidence/**/quality-map.yaml`. It uses quality-map
+target ids and names for affected feature/spec identity; do not infer feature
+ownership from test file names. It reads structural proof gaps, evidence depth,
+commands, paths, and notes from the current map contract; it does not depend on
+embedded run-state fields. Each prompt separates source-of-truth inputs from
+verification checks so the fixing agent knows what to read versus what to run.
+The bundled helper is TypeScript plus a bash launcher only; do not introduce
+Python or another language for this workflow.
 
 ## Evidence Categories
 
@@ -276,12 +318,16 @@ non-negotiable floors.
 Resolve the strategy posture for each check, first match wins:
 
 1. A per-expectation override in `quality-map.yaml` (one-off tuning).
-2. A project `quality-policy.yaml` at the repo root or evidence root, if present.
+2. Repo-root `quality-policy.yaml`, if present.
 3. The baked-in default in `assets/default-quality-policy.md`.
 
 Standalone-safe: if no `quality-policy.yaml` exists, use the baked-in default.
 Never require the file, and never block on its absence. The resolved posture
 governs how hard to push for evidence (strategy), not how the result is scored.
+
+If the same proof-strategy decision keeps recurring across multiple expectations,
+promote it out of per-expectation overrides and into repo-root
+`quality-policy.yaml`.
 
 ## Workflow
 
@@ -374,8 +420,8 @@ Push, do not just record:
   (`create-tests`, `create-agent-tests`) per Specialized Test Authoring, then
   record the resulting evidence.
 - When budget forces a check to stop short of its ideal proof, record the chosen
-  allocation and the **residual risk knowingly accepted** in `residual_risk` /
-  `next_best_proof`; never under-test silently.
+  allocation and the **residual proof gap knowingly accepted** in
+  `proof_gap.summary` / `proof_gap.next_step`; never under-test silently.
 
 ### 6. Run Verification
 
@@ -389,8 +435,12 @@ Run targeted checks first, then broader suites when justified:
 - Agent checks when required by the test spec, including browser, API, DB, or
   mixed full-stack verification.
 
-Record exact commands, outcomes, and important failure details. If a capability
-is missing, mark it `BLOCKED` or `NOT MEASURED`; do not claim it passed.
+Record exact commands, outcomes, and important failure details. If later
+evidence depends on any prerequisite or artifact-producing command, treat that
+command as part of verification rather than as background context only. Put the
+full reproducible command chain in the test spec's `Automated checks` and in
+the report's `Commands Run`. If a capability is missing, mark it `BLOCKED` or
+`NOT MEASURED`; do not claim it passed.
 
 ### 7. Write Or Update Quality Map
 
@@ -406,16 +456,19 @@ Use the bundled schema as the validation contract for tools and UIs:
 On repeat runs:
 
 - Preserve stable expectation and evidence ids when the meaning is unchanged.
-- Rewrite confusing titles, descriptions, residual-risk text, and next-best
-  proof text when the meaning is unchanged but the dashboard would be hard to
+- Rewrite confusing titles, descriptions, proof-gap text, and policy-override
+  notes when the meaning is unchanged but the dashboard would be hard to
   understand.
 - Collapse bloated documentation-baseline evidence lists when they are only
   proving source alignment rather than feature behavior.
-- Refresh latest results, timestamps, commits, artifacts, and CI-gating status.
-- Update weighted evaluations only when evidence or risk actually changed.
-- Mark stale, flaky, blocked, missing, or deferred evidence explicitly.
-- Add release blockers, high-risk gaps, stale/flaky evidence, and deferred
-  items to `gap_summary` when applicable.
+- Keep evidence entries structural: modality, path or URL, command, depth,
+  reliability, intended contexts, and structural notes.
+- Encode planned-but-missing proof explicitly in the map. Use `depth: MISSING`
+  or `depth: BLOCKED` only when they describe the current proof definition, not
+  a runtime result.
+- Keep current pass/fail state, timestamps, freshness, and confidence rollups
+  out of `quality-map.yaml`; record them in `test-report.md` and downstream
+  observation/evaluation artifacts instead.
 
 ### 8. Write Or Update Test Report
 
@@ -425,8 +478,11 @@ Include:
 - Target, scope, source material, branch/commit when available, and timestamp.
 - Overall status and confidence.
 - Commands run and pass/fail/block results.
-- Coverage matrix derived from `quality-map.yaml`, including risk weight,
-  evidence depth, latest result, weighted confidence, and residual risk.
+- Any prerequisite or artifact-producing commands actually relied on by later
+  checks.
+- Coverage matrix derived from `quality-map.yaml` plus the observed run results
+  captured in the report, including risk weight, evidence depth, observed
+  outcome, and residual risk.
 - Tests added or updated.
 - Blocking findings first.
 - Deferred items and residual risk with retest paths.
@@ -441,8 +497,8 @@ evidence actually covers them.
 This skill assesses and records evidence; it delegates test creation to producer
 skills and project workflows rather than inventing tests directly. Use the
 established workflow for the test kind, then map the resulting specs, test files,
-command output, and run artifacts back into this skill's `quality-map.yaml`,
-coverage matrix, and test report.
+command output, and run artifacts back into this skill's structural
+`quality-map.yaml` evidence definitions and its dynamic `test-report.md`.
 
 - `create-tests`: deterministic Shiplight YAML E2E tests (Playwright + agentic
   SDK).
@@ -462,10 +518,13 @@ when one exists).
 
 When an agent test produces a report, record it here:
 
-- Map the report path, the final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status, and
-  evidence artifacts (HTML reports, screenshot sets, videos, traces, logs) into
-  `quality-evidence/<target>/quality-map.yaml` and
-  `quality-evidence/<target>/test-report.md`.
+- Keep the stable proof reference in `quality-evidence/<target>/quality-map.yaml`
+  via `evidence.path`, `evidence.url`, `evidence.command`, `evidence.contexts`,
+  and `evidence.notes`.
+- Put the final `PASS`/`FAIL`/`BLOCKED`/`ABORTED` status and evidence artifacts
+  (HTML reports, screenshot sets, videos, traces, logs) in
+  `quality-evidence/<target>/test-report.md` and downstream observation
+  artifacts.
 - Treat `ABORTED` as an orchestration interruption to rerun, not as product
   evidence.
 - Text-only browser claims are not sufficient evidence; require an auditable
@@ -482,6 +541,7 @@ Use these sections unless the repo has a better local convention.
 
 **Scope**: <feature|module|PR|ticket>
 **Source material**: <paths, prompt, issue, PRD, inferred>
+**Quality policy**: [../../quality-policy.yaml](../../quality-policy.yaml)
 **Test report**: [test-report.md](./test-report.md)
 
 ## Testing What
@@ -497,20 +557,12 @@ For the full starter, copy `assets/test-spec-template.md`.
 `quality-map.yaml`:
 
 ```yaml
-schema_version: 1
 target:
   id: 001-example-feature # numbered feature slug
   name: <target name>
   scope: feature
   aliases: []
   source_refs: []
-assessment:
-  updated_at: <ISO-8601 timestamp>
-  branch: <branch-or-unknown>
-  commit: <git-sha-or-unknown>
-  generated_by: quality-evidence
-  overall_status: UNKNOWN
-  overall_confidence: UNKNOWN
 expectations:
   - id: <stable-expectation-id>
     title: <behavior or invariant>
@@ -520,25 +572,46 @@ expectations:
     risk:
       weight: 3
       rationale: <why failure matters>
+    policy_override:
+      preferred_modalities: []
+      discouraged_modalities: []
+      required_modalities: []
+      required_contexts: []
+      minimum_depth: DIRECT
+      require_direct_evidence: false
+      require_multi_layer: false
+      require_gate: false
+      notes: <optional override>
     evidence: []
-    evaluation:
-      coverage_status: NOT COVERED
-      confidence: UNKNOWN
-      breadth: MISSING
-      depth: MISSING
-      freshness: UNKNOWN
-      weighted_confidence: UNKNOWN
-      residual_risk: <what remains unproven>
-      next_best_proof: <highest-value follow-up evidence>
-gap_summary:
-  release_blockers: []
-  high_risk_gaps: []
-  stale_or_flaky_evidence: []
-  deferred_items: []
+    proof_gap:
+      summary: <what proof is still missing or weak>
+      next_step: <highest-value follow-up proof>
 ```
 
 For the full starter, copy `assets/quality-map.template.yaml`. For validation,
 use `assets/quality-map.schema.json`.
+
+`quality-policy.yaml`:
+
+```yaml
+name: <project proof policy>
+summary: <how this project wants proof budget spent>
+defaults:
+  preferred_modalities: [unit, contract, integration]
+  minimum_depth: INDIRECT
+  require_direct_evidence: false
+rules:
+  - id: release-critical-floor
+    when:
+      min_risk_weight: 5
+    minimum_depth: DIRECT
+    require_direct_evidence: true
+    require_gate: true
+    require_multi_layer: true
+```
+
+For the full starter, copy `assets/quality-policy.template.yaml`. For
+validation, use `assets/quality-policy.schema.json`.
 
 `test-report.md`:
 
@@ -569,11 +642,13 @@ For the full starter, copy `assets/test-report-template.md`.
 ## Operating Rules
 
 - This skill may edit tests, test fixtures, test scripts,
-  `quality-evidence/**`, legacy `test-quality/**`, and project-standard test
-  evidence folders.
+  `quality-evidence/**`, repo-root `quality-policy.yaml`, and project-standard
+  test evidence folders.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
   enums, and avoid free-form dialects when a field already exists.
+- Keep `quality-map.yaml` structural only. Do not write current pass/fail state,
+  timestamps, freshness, or confidence rollups into it.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
