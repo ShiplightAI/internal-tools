@@ -1,19 +1,24 @@
-# Test Spec: <Feature Name>
+# Test Spec: <Target>
 
-**Feature**: `<feature-directory-name>`
-**Source of truth**: [spec.md](./spec.md)
+**Scope**: <feature | module | PR | ticket>
+**Source material**: <paths, prompt, issue, PRD, ticket, or "inferred">
 **Quality policy**: [../../quality-policy.yaml](../../quality-policy.yaml)
 **Test report**: [test-report.md](./test-report.md)
 
-This file defines the durable testing contract for this feature: what needs
+This file defines the durable testing contract for this target: what needs
 confidence and which evidence strategies are acceptable. Automated tests are one
 implementation of the contract, not the contract itself.
+
+This template is Speckit-aware but not Speckit-dependent. When a numbered spec
+exists, link it under **Source material** and reuse its requirement ids; when it
+does not, describe the target from docs, code, tickets, or user input and mark
+inferred expectations accordingly.
 
 ## Testing What
 
 Testing what is broader than product requirements. Include product behavior,
 implementation/system invariants, operational behavior, risk areas, and
-stakeholder confidence goals that matter for trusting this feature.
+stakeholder confidence goals that matter for trusting this target.
 
 ### Product Behaviors
 
@@ -45,22 +50,16 @@ stakeholder confidence goals that matter for trusting this feature.
 | --- | --- | --- | --- | --- | --- |
 | <behavior/invariant> | <impact if broken> | <unit, contract, integration, e2e, agent, manual, telemetry> | <chosen proof> | <confidence/cost/stability rationale> | <remaining gap> |
 
-## Scope
+Out of scope:
 
-- User stories covered:
-- Primary requirements covered:
-- Success criteria covered:
-- Implementation/system invariants covered:
-- Out of scope:
+- <Behaviors, environments, or risks this target intentionally does not cover.>
 
 ## Test Cases
 
-### <FEATURE>-T01 <Capability / Behavior Name>
+### <TARGET>-T01 <Capability / Behavior Name>
 
 - Testing what:
-- User stories:
-- Requirements:
-- Success criteria:
+- Source refs:
 - Preconditions:
   - Required account / role:
   - Required data:
@@ -89,15 +88,14 @@ stakeholder confidence goals that matter for trusting this feature.
   - <Rows, accounts, external resources, sessions, or files to remove.>
 - If not executable:
   - Mark `SKIPPED` when the environment lacks required fixtures or access.
-  - Mark `HUMAN_REQUIRED` when no available agent/tool can verify it.
+  - Mark `BLOCKED` when no available agent/tool can verify it and a human is
+    required.
   - Mark `DEFERRED` when the proof belongs to a later release/live-env sweep.
 
-### <FEATURE>-T02 <Next Capability / Behavior Name>
+### <TARGET>-T02 <Next Capability / Behavior Name>
 
 - Testing what:
-- User stories:
-- Requirements:
-- Success criteria:
+- Source refs:
 - Preconditions:
 - Automated checks:
 
@@ -112,7 +110,7 @@ stakeholder confidence goals that matter for trusting this feature.
 - Cleanup:
 - If not executable:
 
-## Fixtures
+## Fixtures And Environments
 
 Fixtures describe how to bind the portable test cases to concrete environments.
 Do not put secrets in this file. Describe secret availability without printing
@@ -167,8 +165,9 @@ values.
 
 - Stable report path: use the report location defined by the active testing
   workflow or skill.
-- Report every test case as `PASS`, `FAIL`, `PARTIAL`, `BLOCKED`, `SKIPPED`,
-  `HUMAN_REQUIRED`, or `DEFERRED`.
+- Report every test case with a consistent result status: `PASS`, `FAIL`,
+  `PARTIAL`, `BLOCKED`, `SKIPPED`, `NOT RUN`, `DEFERRED`, `ABORTED`, or
+  `UNKNOWN`.
 - Put blocking failures first in `## Findings` or `## Deferred / Residual Risk`.
 - Record commands run, evidence collected, cleanup performed, and resources
   intentionally left behind.
@@ -188,4 +187,4 @@ values.
 - If a case cannot be automated, specify how an agent, human, telemetry query,
   or live-env check can verify it.
 - If a case depends on environment capabilities, keep the test case portable and
-  document the environment-specific binding under `## Fixtures`.
+  document the environment-specific binding under `## Fixtures And Environments`.

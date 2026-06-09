@@ -5,13 +5,10 @@ evaluation_sets:
     profiles:
       - profile_id: "example-workflow"
       - profile_id: "example-secondary-workflow"
-    required_subjects:
-      - "002-example-feature"
-      - "003-example-secondary-feature"
 
 # Authoring notes:
 # - One evaluation set per shared review unit.
 # - A set can contain one profile or many profiles.
 # - Use a single-profile set when you want to debug one source in isolation.
 # - Profile order is the saved review order.
-# - required_subjects should name the features this review is expected to cover.
+# - Scope filtering happens later at the project or saved-view level.

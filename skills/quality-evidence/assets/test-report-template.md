@@ -1,21 +1,37 @@
-# Test Report: <Feature Name>
+# Test Report: <Target>
 
-**Spec**: [spec.md](./spec.md)
 **Test spec**: [test-spec.md](./test-spec.md)
-**Branch**: `<branch-name>`
-**Created**: `<YYYY-MM-DD>`
-**Last updated**: `<YYYY-MM-DD>`
-**Tester**: `<name or agent>`
+**Quality map**: [quality-map.yaml](./quality-map.yaml)
+**Branch / commit**: <branch and commit if available>
+**Last updated**: <YYYY-MM-DD>
+**Tester**: <agent or person>
 
 This report records what was tested, what evidence exists, what failed or was
-blocked, and which residual risks remain after applying the feature test spec.
+blocked, and which residual risks remain after applying the target test spec. It
+is the dynamic snapshot: current run outcomes, freshness, and confidence live
+here, not in `quality-map.yaml`.
 
 ## Summary
 
 - Overall status: `PASS` / `FAIL` / `PARTIAL` / `BLOCKED`
+- Overall confidence: `HIGH` / `MEDIUM` / `LOW` / `UNKNOWN`
 - Main confidence gained:
 - Blocking findings:
 - Residual release risk:
+
+## Source Material
+
+- Source material used: <specs, PRDs, tickets, docs, code, user input>
+- Source material not found or not available:
+
+## Commands Run
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `<command>` | `PASS` / `FAIL` / `BLOCKED` / `SKIPPED` / `NOT RUN` | <summary> |
+
+Include any prerequisite or artifact-producing commands that later checks
+relied on.
 
 ## Tests Added Or Updated
 
@@ -33,42 +49,28 @@ blocked, and which residual risks remain after applying the feature test spec.
 
 - `<path>` (<count> tests)
 
-## Commands Run
-
-| Command | Result | Notes |
-| --- | --- | --- |
-| `<command>` | `PASS` / `FAIL` / `BLOCKED` / `SKIPPED` | <summary> |
-
-Include any prerequisite or artifact-producing commands that later checks
-relied on.
-
 ## Coverage Matrix
 
-Use statuses consistently: `COVERED`, `PARTIAL`, `IMPLICIT`, `NOT COVERED`,
-`NOT MEASURED`, `MANUAL`, `BLOCKED`, or `DEFERRED`.
+Derived from `quality-map.yaml` plus the run results observed in this report.
+Use coverage statuses consistently: `COVERED`, `PARTIAL`, `IMPLICIT`,
+`NOT COVERED`, `NOT MEASURED`, `MANUAL`, `BLOCKED`, or `DEFERRED`.
 
-### Testing What
+| Quality check | Risk | Evidence depth | Status | Observed outcome | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| <expectation id / title> | <1-5> | <DIRECT/INDIRECT/STATIC/...> | <status> | <PASS/FAIL/BLOCKED/...> | <remaining gap> |
 
-| What | Status | Evidence |
-| --- | --- | --- |
-| <behavior/invariant/risk> | <status> | <test, command, report, dashboard, or rationale> |
-
-### Functional Requirements
-
-| FR | Status | Evidence |
-| --- | --- | --- |
-| FR-001 | <status> | <evidence> |
-
-### Success Criteria
-
-| SC | Status | Evidence |
-| --- | --- | --- |
-| SC-001 | <status> | <evidence> |
+When a numbered Speckit spec backs this target, you may add requirement- and
+success-criteria-keyed sub-tables (FR-001, SC-001, ...) below this matrix. They
+are optional and supplement, not replace, the quality-check matrix above.
 
 ## Agent Test Evidence
 
-- `<agent test path>` — Status: `<PASS/FAIL/BLOCKED>`. Evidence:
+- `<agent test path>` — Status: `<PASS/FAIL/BLOCKED/ABORTED>`. Evidence:
   `<report/screenshot/video/trace path or URL>`.
+
+Text-only browser claims are not sufficient; require an auditable artifact for
+browser-driven cases. Treat `ABORTED` as an orchestration interruption to rerun,
+not as product evidence.
 
 ## Manual Verification Log
 
@@ -109,7 +111,5 @@ List blocking failures first.
 - BLOCKED:
 - DEFERRED:
 
-## Notes
-
-- Never include passwords, API keys, cookies, tokens, database URLs, or raw
-  secret fixture payloads.
+Never include passwords, API keys, cookies, tokens, database URLs, or raw secret
+fixture payloads in this report.

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://shiplight.dev/schemas/quality-center/observation-sources.schema.json",
   "title": "Quality Center Observation Source Profiles",
   "type": "object",
@@ -10,11 +10,11 @@
       "type": "array",
       "minItems": 1,
       "items": {
-        "$ref": "#/$defs/profile"
+        "$ref": "#/definitions/profile"
       }
     }
   },
-  "$defs": {
+  "definitions": {
     "nonEmptyString": {
       "type": "string",
       "minLength": 1
@@ -24,9 +24,9 @@
       "additionalProperties": false,
       "minProperties": 1,
       "properties": {
-        "path": { "$ref": "#/$defs/nonEmptyString" },
-        "url": { "$ref": "#/$defs/nonEmptyString" },
-        "label": { "$ref": "#/$defs/nonEmptyString" }
+        "path": { "$ref": "#/definitions/nonEmptyString" },
+        "url": { "$ref": "#/definitions/nonEmptyString" },
+        "label": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
     "auth": {
@@ -35,119 +35,30 @@
       "properties": {
         "required_env": {
           "type": "array",
-          "items": { "$ref": "#/$defs/nonEmptyString" }
-        }
-      }
-    },
-    "observation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["subject_id", "evidence_id"],
-      "properties": {
-        "subject_id": { "$ref": "#/$defs/nonEmptyString" },
-        "expectation_id": { "$ref": "#/$defs/nonEmptyString" },
-        "evidence_id": { "$ref": "#/$defs/nonEmptyString" },
-        "note": { "$ref": "#/$defs/nonEmptyString" }
-      }
-    },
-    "junitMapping": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["test_names", "observations"],
-      "properties": {
-        "file": { "$ref": "#/$defs/nonEmptyString" },
-        "class_name": { "$ref": "#/$defs/nonEmptyString" },
-        "test_names": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/nonEmptyString" }
-        },
-        "observations": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/observation" }
-        }
-      }
-    },
-    "playwrightMapping": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["test_names", "observations"],
-      "properties": {
-        "file": { "$ref": "#/$defs/nonEmptyString" },
-        "project_name": { "$ref": "#/$defs/nonEmptyString" },
-        "test_names": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/nonEmptyString" }
-        },
-        "observations": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/observation" }
-        }
-      }
-    },
-    "githubActionsStepMapping": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["step_name", "observations"],
-      "properties": {
-        "workflow_name": { "$ref": "#/$defs/nonEmptyString" },
-        "job_name": { "$ref": "#/$defs/nonEmptyString" },
-        "step_name": { "$ref": "#/$defs/nonEmptyString" },
-        "observations": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/observation" }
+          "items": { "$ref": "#/definitions/nonEmptyString" }
         }
       }
     },
     "junitAdapter": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "artifact_path", "mappings"],
+      "required": ["id", "type", "artifact_path"],
       "properties": {
-        "id": { "$ref": "#/$defs/nonEmptyString" },
-        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "id": { "$ref": "#/definitions/nonEmptyString" },
+        "name": { "$ref": "#/definitions/nonEmptyString" },
         "type": { "const": "junit" },
-        "artifact_path": { "$ref": "#/$defs/nonEmptyString" },
-        "mappings": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/junitMapping" }
-        }
+        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
     "playwrightJsonAdapter": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "artifact_path", "mappings"],
+      "required": ["id", "type", "artifact_path"],
       "properties": {
-        "id": { "$ref": "#/$defs/nonEmptyString" },
-        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "id": { "$ref": "#/definitions/nonEmptyString" },
+        "name": { "$ref": "#/definitions/nonEmptyString" },
         "type": { "const": "playwright-json" },
-        "artifact_path": { "$ref": "#/$defs/nonEmptyString" },
-        "mappings": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/playwrightMapping" }
-        }
-      }
-    },
-    "githubActionsStepAdapter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "type", "mappings"],
-      "properties": {
-        "id": { "$ref": "#/$defs/nonEmptyString" },
-        "name": { "$ref": "#/$defs/nonEmptyString" },
-        "type": { "const": "github-actions-step" },
-        "mappings": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/githubActionsStepMapping" }
-        }
+        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
     "github": {
@@ -155,14 +66,14 @@
       "additionalProperties": false,
       "required": ["repo", "workflow", "artifact_names"],
       "properties": {
-        "repo": { "$ref": "#/$defs/nonEmptyString" },
-        "workflow": { "$ref": "#/$defs/nonEmptyString" },
+        "repo": { "$ref": "#/definitions/nonEmptyString" },
+        "workflow": { "$ref": "#/definitions/nonEmptyString" },
         "artifact_names": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/nonEmptyString" }
+          "items": { "$ref": "#/definitions/nonEmptyString" }
         },
-        "branch": { "$ref": "#/$defs/nonEmptyString" }
+        "branch": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
     "localFolder": {
@@ -170,7 +81,7 @@
       "additionalProperties": false,
       "required": ["path"],
       "properties": {
-        "path": { "$ref": "#/$defs/nonEmptyString" }
+        "path": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
     "profile": {
@@ -178,27 +89,26 @@
       "additionalProperties": false,
       "required": ["id", "name", "source_kind", "adapters"],
       "properties": {
-        "id": { "$ref": "#/$defs/nonEmptyString" },
-        "name": { "$ref": "#/$defs/nonEmptyString" },
-        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "id": { "$ref": "#/definitions/nonEmptyString" },
+        "name": { "$ref": "#/definitions/nonEmptyString" },
+        "description": { "$ref": "#/definitions/nonEmptyString" },
         "source_kind": {
           "enum": ["github-actions", "local-folder"]
         },
         "source_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/sourceRef" }
+          "items": { "$ref": "#/definitions/sourceRef" }
         },
-        "auth": { "$ref": "#/$defs/auth" },
-        "github": { "$ref": "#/$defs/github" },
-        "local_folder": { "$ref": "#/$defs/localFolder" },
+        "auth": { "$ref": "#/definitions/auth" },
+        "github": { "$ref": "#/definitions/github" },
+        "local_folder": { "$ref": "#/definitions/localFolder" },
         "adapters": {
           "type": "array",
           "minItems": 1,
           "items": {
             "oneOf": [
-              { "$ref": "#/$defs/junitAdapter" },
-              { "$ref": "#/$defs/playwrightJsonAdapter" },
-              { "$ref": "#/$defs/githubActionsStepAdapter" }
+              { "$ref": "#/definitions/junitAdapter" },
+              { "$ref": "#/definitions/playwrightJsonAdapter" }
             ]
           }
         }
@@ -221,21 +131,7 @@
             }
           },
           "then": {
-            "required": ["local_folder"],
-            "properties": {
-              "adapters": {
-                "type": "array",
-                "not": {
-                  "contains": {
-                    "type": "object",
-                    "required": ["type"],
-                    "properties": {
-                      "type": { "const": "github-actions-step" }
-                    }
-                  }
-                }
-              }
-            }
+            "required": ["local_folder"]
           }
         }
       ]

@@ -86,16 +86,17 @@ Use these terms consistently in this skill:
 | **Testing what** | The authoring inventory of behaviors, invariants, and risk areas that need confidence. This is the planning input. |
 | **Quality check** | Product-language name for one machine-tracked expectation. Use this phrasing in dashboards, reports, and human explanations. |
 | **Expectation** | The machine-readable structural entry stored under `expectations:` in `quality-map.yaml`. |
-| **Subject** | The evaluated slice referenced by runtime review config, usually a feature target such as `002-example-feature`, but it can also be another named product slice. |
+| **Target** | The structured feature target evaluated by Quality Center, usually a feature slug such as `002-example-feature`. Saved product views may later group multiple targets. |
 
 Mapping:
 
 - `testing what` is authored first.
 - each durable `quality check` becomes one `expectation` entry in
   `quality-map.yaml`
-- one `subject` contains many `expectations`
-- runtime review config uses `subject_id` and `required_subjects` to point at
-  the containing feature or product slice, not at one expectation row
+- one `target` contains many `expectations`
+- runtime review config does not remap proof onto expectations
+- Quality Center joins runtime results onto the containing target through the
+  proof-source paths already declared on evidence entries
 
 ## Scope Resolution
 
@@ -580,12 +581,14 @@ Use this process:
   - standard artifacts such as JUnit XML or Playwright JSON
 - Prefer standard structured artifacts over custom exporters.
 - Create one **atomic observation source profile** per source integration.
-- Map each raw test or workflow step to canonical `subject_id` and
-  `evidence_id` values that already exist in feature `quality-map.yaml` files.
-  Add the optional `expectation_id` only to disambiguate when the same
-  `evidence_id` is reused across expectations within one subject.
-- Keep profile scope honest. If a workflow only proves direct browser evidence,
-  do not over-map coarse steps to unrelated evidence ids.
+- Keep profiles acquisition-only: select the workflow or folder and the
+  structured result artifacts inside it.
+- Use `quality-map.yaml` as the proof-definition source of truth. Runtime join
+  should happen through evidence proof-source paths, not through a second
+  remapping table.
+- Use the repo-relative test file path as the canonical proof-source identity.
+  When an artifact omits the file path, rely on a stable class/basename
+  canonicalization only as a fallback, not as the primary authoring contract.
 - Create one or more saved evaluation sets that bundle the relevant profiles
   into a runnable review unit.
 - Verify the config by scanning the repo in Quality Center and running at least
@@ -619,28 +622,30 @@ Use this compact authoring guide when runtime review setup is requested:
 - Prefer these adapter inputs:
   - JUnit XML
   - Playwright JSON
-  - GitHub step results for coarse gates only
-- Every mapping must end at stable structural ids:
-  - `subject_id`
-  - `evidence_id`
-  - `expectation_id` (optional; only to disambiguate a reused `evidence_id`
-    within one subject)
+- Keep adapters acquisition-only:
+  - `artifact_path`
+  - parser kind (`junit` or `playwright-json`)
+- Do not add `subject_id`, `evidence_id`, or workflow-step mappings here.
+- The join target already lives in `quality-map.yaml`:
+  - `evidence.path` should point at the canonical repo-relative test file path
+  - multiple evidence rows may intentionally share the same file path in v1
 
 ### B. Author `evaluation-sets.yaml`
 
 - One evaluation set per shared review unit.
 - A set references one or more profile ids in precedence order.
-- `required_subjects` should name the features the review is supposed to cover.
 - If a user wants to debug one profile in isolation, use a single-profile
   evaluation set instead of inventing a separate product concept.
+- Scope filtering happens later at the project or saved-view level, not in the
+  evaluation set.
 
 ### C. Verify
 
 - Scan the repo in Quality Center and confirm both files are discovered.
 - Run one saved evaluation set.
-- Confirm Quality Center resolves observations onto the intended evidence ids.
-- If observations are missing, fix the source profile mappings rather than
-  weakening the structural evidence model.
+- Confirm Quality Center resolves observations onto the intended evidence paths.
+- If observations are missing, fix the emitted test file path or the structural
+  `evidence.path` declaration rather than adding a second mapping table.
 
 ## Specialized Test Authoring
 
@@ -779,14 +784,11 @@ profiles:
       artifact_names: [qc-observations-*]
     adapters:
       - id: browser-junit
-        type: junit # junit | playwright-json | github-actions-step
+        type: junit # junit | playwright-json
         artifact_path: artifacts/browser.junit.xml
-        mappings:
-          - file: path/to/test.ts
-            test_names: ["does the thing"]
-            observations:
-              - subject_id: 002-example-feature
-                evidence_id: ev-browser-proof
+      - id: browser-json
+        type: playwright-json
+        artifact_path: artifacts/browser.playwright.json
 ```
 
 For the full starter, copy `assets/observation-sources.template.yaml`.
@@ -800,8 +802,6 @@ evaluation_sets:
     name: Example review
     profiles:
       - profile_id: example-workflow
-    required_subjects:
-      - 002-example-feature
 ```
 
 For the full starter, copy `assets/evaluation-sets.template.yaml`.
@@ -847,7 +847,9 @@ For the full starter, copy `assets/test-report-template.md`.
   timestamps, freshness, or confidence rollups into it.
 - Keep `.quality-center/observation-sources.yaml` and
   `.quality-center/evaluation-sets.yaml` repo-scoped. Do not duplicate their
-  runtime-review wiring into feature `quality-map.yaml`.
+  source-acquisition or saved-review bundling into feature `quality-map.yaml`.
+  Keep the proof-definition join in feature evidence via canonical
+  repo-relative test file paths.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
