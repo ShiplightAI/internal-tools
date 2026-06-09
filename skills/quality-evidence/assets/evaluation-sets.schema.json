@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shiplight.dev/schemas/quality-center/evaluation-sets.schema.json",
+  "title": "Quality Center Evaluation Sets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evaluation_sets"],
+  "properties": {
+    "evaluation_sets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evaluationSet"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profileReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "evaluationSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "profiles"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "profiles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/profileReference" }
+        },
+        "required_subjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+profiles:
+  - id: "example-workflow"
+    name: "Example workflow"
+    description: "Map one runtime result source onto existing quality-map evidence ids."
+    source_kind: "github-actions" # github-actions | local-folder
+
+    source_refs:
+      - path: ".github/workflows/publish.yml"
+        label: "Workflow source"
+      - path: "quality-evidence/002-example-feature/quality-map.yaml"
+        label: "Feature quality map"
+
+    auth:
+      required_env:
+        - "GITHUB_TOKEN" # Only for github-actions sources
+
+    github:
+      repo: "org/repo"
+      workflow: "publish.yml"
+      artifact_names:
+        - "qc-observations-*"
+      # branch: "main" # Optional narrow filter
+
+    # local_folder:
+    #   path: "artifacts/qc"
+
+    adapters:
+      - id: "browser-junit"
+        name: "Browser JUnit"
+        type: "junit" # junit | playwright-json | github-actions-step
+        artifact_path: "cli/browser-e2e.junit.xml"
+        mappings:
+          - file: "apps/cli/src/commands/create.e2e.test.ts"
+            test_names:
+              - "scaffolds the expected files into a fresh target"
+            observations:
+              - subject_id: "002-example-feature"
+                # expectation_id disambiguates when the same evidence_id is reused
+                # across expectations in the subject; omit when evidence ids are
+                # unique within the subject.
+                expectation_id: "exp-create-scaffold"
+                evidence_id: "ev-create-e2e"
+
+      # Use github-actions-step only for coarse gate signals you have audited.
+      - id: "unit-gate"
+        name: "Unit gate"
+        type: "github-actions-step"
+        mappings:
+          - job_name: "publish"
+            step_name: "Unit tests"
+            observations:
+              - subject_id: "002-example-feature"
+                evidence_id: "ev-unit-gate"
+
+# Authoring notes:
+# - One profile per source integration.
+# - Prefer standard structured artifacts such as JUnit XML or Playwright JSON.
+# - Map raw tests or steps to existing quality-map evidence ids.
+# - Keep mappings honest; do not over-map broad workflow steps to unrelated proof.
+# - subject_id + evidence_id resolve the proof; add expectation_id only to
+#   disambiguate a reused evidence_id within the same subject.

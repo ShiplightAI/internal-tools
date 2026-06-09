@@ -1,6 +1,6 @@
 ---
 name: quality-evidence
-description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
+description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring Quality Center runtime review when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
@@ -9,7 +9,8 @@ user_invocable: true
 Quality evidence workflow for features, specs, modules, PRs, tickets, PRDs,
 or user-described changes. Use when the user wants to understand or raise
 confidence in a system through clear quality checks, mapped quality evidence,
-concrete evidence gaps, recommended actions, and an auditable pass/fail report.
+concrete evidence gaps, recommended actions, optional Quality Center runtime
+review wiring, and an auditable pass/fail report.
 
 This skill is Speckit-aware but not Speckit-dependent. It works best when a
 Speckit spec provides the upstream truth; for brownfield projects, it can
@@ -17,6 +18,10 @@ reconstruct provisional quality checks from docs, code, tests, CI, and runtime
 behavior, then mark those checks as `IMPLEMENTATION` or `INFERRED` until the
 user ratifies them. Because it runs standalone, it is the recommended cold-start
 entry point for an un-initialized brownfield repo, before any Spec Kit scaffolding.
+
+In this skill, **Quality Center** means the Shiplight `quality-center`
+product/repo that scans structural artifacts, ingests observations, and
+evaluates saved runtime reviews.
 
 ## Core Model
 
@@ -48,6 +53,49 @@ Use recommended actions to say what proof to add next.
 Run outcomes, freshness, and current confidence do not belong in
 `quality-map.yaml`. Record those in `test-report.md` and downstream
 observation/evaluation artifacts.
+
+When the user wants Quality Center to consume runtime results, add an optional
+second layer:
+
+```text
+quality-map.yaml          structural proof definition
+        ↓
+observation-sources.yaml  where runtime results come from
+        ↓
+evaluation-sets.yaml      which profiles are reviewed together
+        ↓
+Quality Center            observation-backed quality score and review state
+```
+
+Keep the layers separate:
+
+- `quality-map.yaml` stays feature-scoped and structural.
+- `.quality-center/observation-sources.yaml` is repo-scoped runtime source
+  config.
+- `.quality-center/evaluation-sets.yaml` is repo-scoped review bundling.
+- Observation wiring is optional. Do it when the user wants
+  Quality-Center-backed runtime review, release review, or observation
+  ingestion, not for every structural evidence task.
+
+## Vocabulary Bridge
+
+Use these terms consistently in this skill:
+
+| Term | Meaning in this skill |
+| --- | --- |
+| **Testing what** | The authoring inventory of behaviors, invariants, and risk areas that need confidence. This is the planning input. |
+| **Quality check** | Product-language name for one machine-tracked expectation. Use this phrasing in dashboards, reports, and human explanations. |
+| **Expectation** | The machine-readable structural entry stored under `expectations:` in `quality-map.yaml`. |
+| **Subject** | The evaluated slice referenced by runtime review config, usually a feature target such as `002-example-feature`, but it can also be another named product slice. |
+
+Mapping:
+
+- `testing what` is authored first.
+- each durable `quality check` becomes one `expectation` entry in
+  `quality-map.yaml`
+- one `subject` contains many `expectations`
+- runtime review config uses `subject_id` and `required_subjects` to point at
+  the containing feature or product slice, not at one expectation row
 
 ## Scope Resolution
 
@@ -109,6 +157,10 @@ Create or update these artifacts:
 - Per target: `quality-evidence/<target-slug>/test-spec.md`
 - Per target: `quality-evidence/<target-slug>/quality-map.yaml`
 - Per target: `quality-evidence/<target-slug>/test-report.md`
+- Repo-wide when Quality-Center-backed runtime review is needed:
+  `.quality-center/observation-sources.yaml`
+- Repo-wide when Quality-Center-backed runtime review is needed:
+  `.quality-center/evaluation-sets.yaml`
 
 Use repo-root `quality-policy.yaml` as the canonical project policy location.
 Use `quality-evidence/` for per-target artifacts.
@@ -129,6 +181,23 @@ When project-specific proof posture needs to be shared across features, create
 or update repo-root `quality-policy.yaml` from
 `assets/quality-policy.template.yaml` and validate against
 `assets/quality-policy.schema.json`.
+
+When runtime review setup is in scope, create or update:
+
+- `.quality-center/observation-sources.yaml` from
+  `assets/observation-sources.template.yaml`
+- `.quality-center/evaluation-sets.yaml` from
+  `assets/evaluation-sets.template.yaml`
+
+Validate runtime-review config against:
+
+- `assets/observation-sources.schema.json`
+- `assets/evaluation-sets.schema.json`
+
+These schema files mirror the current Quality Center parser contract.
+
+These two files are repo-scoped integration artifacts. They do not replace
+feature `quality-map.yaml` files.
 
 ## Quality Map
 
@@ -492,6 +561,87 @@ On repeat runs, refresh current results, preserve useful historical manual logs
 and evidence links, update timestamps, and close deferred items only when new
 evidence actually covers them.
 
+### 9. Optional: Wire Runtime Review Into Quality Center
+
+Only do this step when the user wants Quality-Center-backed runtime review,
+observation ingestion, or release review. Skip it for structural-only
+quality-map work.
+
+Author repo-level runtime review config in two layers:
+
+1. `.quality-center/observation-sources.yaml`
+2. `.quality-center/evaluation-sets.yaml`
+
+Use this process:
+
+- Inspect the repo's existing result producers first:
+  - GitHub Actions workflows
+  - local result folders
+  - standard artifacts such as JUnit XML or Playwright JSON
+- Prefer standard structured artifacts over custom exporters.
+- Create one **atomic observation source profile** per source integration.
+- Map each raw test or workflow step to canonical `subject_id` and
+  `evidence_id` values that already exist in feature `quality-map.yaml` files.
+  Add the optional `expectation_id` only to disambiguate when the same
+  `evidence_id` is reused across expectations within one subject.
+- Keep profile scope honest. If a workflow only proves direct browser evidence,
+  do not over-map coarse steps to unrelated evidence ids.
+- Create one or more saved evaluation sets that bundle the relevant profiles
+  into a runnable review unit.
+- Verify the config by scanning the repo in Quality Center and running at least
+  one saved evaluation set.
+
+Do not blur the responsibilities:
+
+- `quality-map.yaml` answers: what counts as proof for the feature.
+- `observation-sources.yaml` answers: where runtime results come from.
+- `evaluation-sets.yaml` answers: which profiles are reviewed together.
+
+Keep runtime review config proportional. Do not create these files just because
+the repo has tests. Create them when the user wants shared runtime review.
+
+## Observation Review Setup Guide
+
+Use this compact authoring guide when runtime review setup is requested:
+
+### A. Author `observation-sources.yaml`
+
+- One profile per source integration.
+- Good profile boundaries:
+  - one GitHub workflow
+  - one local artifact folder
+- Required fields:
+  - `id`
+  - `name`
+  - `source_kind`
+  - source-specific config
+  - one or more adapters
+- Prefer these adapter inputs:
+  - JUnit XML
+  - Playwright JSON
+  - GitHub step results for coarse gates only
+- Every mapping must end at stable structural ids:
+  - `subject_id`
+  - `evidence_id`
+  - `expectation_id` (optional; only to disambiguate a reused `evidence_id`
+    within one subject)
+
+### B. Author `evaluation-sets.yaml`
+
+- One evaluation set per shared review unit.
+- A set references one or more profile ids in precedence order.
+- `required_subjects` should name the features the review is supposed to cover.
+- If a user wants to debug one profile in isolation, use a single-profile
+  evaluation set instead of inventing a separate product concept.
+
+### C. Verify
+
+- Scan the repo in Quality Center and confirm both files are discovered.
+- Run one saved evaluation set.
+- Confirm Quality Center resolves observations onto the intended evidence ids.
+- If observations are missing, fix the source profile mappings rather than
+  weakening the structural evidence model.
+
 ## Specialized Test Authoring
 
 This skill assesses and records evidence; it delegates test creation to producer
@@ -613,6 +763,50 @@ rules:
 For the full starter, copy `assets/quality-policy.template.yaml`. For
 validation, use `assets/quality-policy.schema.json`.
 
+`.quality-center/observation-sources.yaml`:
+
+```yaml
+profiles:
+  - id: example-workflow
+    name: Example workflow
+    source_kind: github-actions # github-actions | local-folder
+    source_refs: []
+    auth:
+      required_env: [GITHUB_TOKEN]
+    github:
+      repo: org/repo
+      workflow: publish.yml
+      artifact_names: [qc-observations-*]
+    adapters:
+      - id: browser-junit
+        type: junit # junit | playwright-json | github-actions-step
+        artifact_path: artifacts/browser.junit.xml
+        mappings:
+          - file: path/to/test.ts
+            test_names: ["does the thing"]
+            observations:
+              - subject_id: 002-example-feature
+                evidence_id: ev-browser-proof
+```
+
+For the full starter, copy `assets/observation-sources.template.yaml`.
+For validation, use `assets/observation-sources.schema.json`.
+
+`.quality-center/evaluation-sets.yaml`:
+
+```yaml
+evaluation_sets:
+  - id: example-review
+    name: Example review
+    profiles:
+      - profile_id: example-workflow
+    required_subjects:
+      - 002-example-feature
+```
+
+For the full starter, copy `assets/evaluation-sets.template.yaml`.
+For validation, use `assets/evaluation-sets.schema.json`.
+
 `test-report.md`:
 
 ```markdown
@@ -642,13 +836,18 @@ For the full starter, copy `assets/test-report-template.md`.
 ## Operating Rules
 
 - This skill may edit tests, test fixtures, test scripts,
-  `quality-evidence/**`, repo-root `quality-policy.yaml`, and project-standard
-  test evidence folders.
+  `quality-evidence/**`, repo-root `quality-policy.yaml`,
+  `.quality-center/observation-sources.yaml`,
+  `.quality-center/evaluation-sets.yaml`, and project-standard test evidence
+  folders.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
   enums, and avoid free-form dialects when a field already exists.
 - Keep `quality-map.yaml` structural only. Do not write current pass/fail state,
   timestamps, freshness, or confidence rollups into it.
+- Keep `.quality-center/observation-sources.yaml` and
+  `.quality-center/evaluation-sets.yaml` repo-scoped. Do not duplicate their
+  runtime-review wiring into feature `quality-map.yaml`.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
