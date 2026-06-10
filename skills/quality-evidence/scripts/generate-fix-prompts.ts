@@ -493,6 +493,14 @@ function isVerificationPath(path: string): boolean {
   return path.startsWith("tests/") || /(?:^|\/)[^/]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|ya?ml)$/.test(path);
 }
 
+// Smoke/health-check evidence points `path` at a CI workflow file and uses
+// `command` as a human pointer to the step (not an executable command). It is
+// backed at runtime by an observation source, not by rerunning a command, so its
+// command must not be surfaced as a "verification check to rerun".
+function isWorkflowPath(path: string): boolean {
+  return /(?:^|\/)\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
+}
+
 function isRunnableCommand(command: string): boolean {
   if (!usefulText(command)) {
     return false;
@@ -523,7 +531,8 @@ function verificationDetails(expectation: JsonObject): { checks: string[]; notes
     const path = scalar(data.path);
     const url = scalar(data.url);
     const noteText = scalar(data.notes);
-    const commands = runnableCommands(command);
+    // For workflow-backed checks, `command` is a human pointer, not runnable.
+    const commands = isWorkflowPath(path) ? [] : runnableCommands(command);
     if (commands.length > 0) {
       checks.push(...commands);
     } else if (usefulText(command)) {

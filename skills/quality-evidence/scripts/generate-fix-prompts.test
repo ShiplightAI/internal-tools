@@ -132,6 +132,27 @@ expectations:
         depth: DIRECT
         reliability: STRONG
         contexts: [local]
+
+  - id: workflow-smoke
+    title: Workflow-backed smoke check is runtime-observed, not rerun
+    source_type: SOURCE
+    category: ops
+    priority: P1
+    risk:
+      weight: 4
+      rationale: A broken release smoke gate breaks every downstream job.
+    evidence:
+      - id: workflow-smoke-proof
+        type: smoke
+        path: .github/workflows/release-ci-runner.yml
+        test_case: agent_payload
+        command: Smoke baked runner image
+        depth: MISSING
+        reliability: UNKNOWN
+        contexts: [ci]
+    proof_gap:
+      summary: The smoke gate has no runtime observation backing yet.
+      next_step: Add a manifest observation source for the release smoke checks.
 YAML
 
 json_output="$("$generator" "$repo_dir" --format json)"
@@ -154,6 +175,7 @@ assert(ids.includes("sentinel-command"), "missing evidence should generate a pro
 assert(ids.includes("next-proof"), "open proof_gap should generate a prompt");
 assert(ids.includes("docs-only-source-snapshot"), "static-only proof should generate a proof-upgrade prompt");
 assert(ids.includes("policy-gap"), "policy override gaps should generate a prompt");
+assert(ids.includes("workflow-smoke"), "workflow-backed smoke gap should generate a prompt");
 
 const sentinel = records.find((record) => record.expectation_id === "sentinel-command");
 assert(sentinel !== undefined, "sentinel fixture record was not found");
@@ -187,6 +209,12 @@ assert(policyGap.closure_mode === "policy_gap", "policy override mismatch should
 assert(policyGap.problem.includes("required contexts missing: pr-ci"), "policy gap should explain the missing required context");
 assert(policyGap.problem.includes("gate-capable proof context"), "policy gap should explain the missing gate context");
 assert(policyGap.source_of_truth_inputs.includes("quality-policy.yaml"), "repo-root quality-policy.yaml should be a source-of-truth input");
+
+const workflowSmoke = records.find((record) => record.expectation_id === "workflow-smoke");
+assert(workflowSmoke !== undefined, "workflow-smoke fixture record was not found");
+assert(!workflowSmoke.verification_checks.includes("Smoke baked runner image"), "workflow-backed command is a human pointer, not a rerunnable check");
+assert(!workflowSmoke.verification_checks.includes(".github/workflows/release-ci-runner.yml"), "workflow file path should not be surfaced as a verification check");
+assert(workflowSmoke.evidence_notes.includes("Smoke baked runner image"), "workflow-backed command should be preserved as an evidence note");
 
 const coveredContext = includeCoveredRecords.find((record) => record.expectation_id === "covered-context");
 assert(coveredContext !== undefined, "--include-covered should include expectations without open proof gaps");

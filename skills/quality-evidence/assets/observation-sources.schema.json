@@ -61,6 +61,17 @@
         "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
       }
     },
+    "manifestAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/definitions/nonEmptyString" },
+        "name": { "$ref": "#/definitions/nonEmptyString" },
+        "type": { "const": "manifest" },
+        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
+      }
+    },
     "github": {
       "type": "object",
       "additionalProperties": false,
@@ -108,7 +119,8 @@
           "items": {
             "oneOf": [
               { "$ref": "#/definitions/junitAdapter" },
-              { "$ref": "#/definitions/playwrightJsonAdapter" }
+              { "$ref": "#/definitions/playwrightJsonAdapter" },
+              { "$ref": "#/definitions/manifestAdapter" }
             ]
           }
         }

@@ -49,6 +49,21 @@ expectations:
         contexts: ["local"] # Contexts where this proof is intended to run or matter
         notes: "<Optional structural note about this proof definition>"
 
+      # Smoke / health check that runs in CI but is not a test file. Point `path`
+      # at the workflow file so a reviewer can open it, and pin `test_case` to the
+      # unit being proven (a step name, or a finer check name when one step bundles
+      # several). A manifest observation source supplies the pass/fail; the
+      # test_case here must match the test_case the workflow emits. test_case
+      # matching is case-insensitive. See observation-sources.template.yaml.
+      - id: "<check-evidence-id>"
+        type: "smoke"
+        path: ".github/workflows/<workflow-file>.yml"
+        test_case: "<step-or-check-name>" # Must match the observation record's test_case
+        command: "<human pointer to the workflow step>"
+        depth: "DIRECT"
+        reliability: "STRONG"
+        contexts: ["ci"]
+
     proof_gap:
       summary: "<What proof is still missing, weak, deferred, or intentionally not bought yet>"
       next_step: "<Highest-value next proof to add, or null if none>"

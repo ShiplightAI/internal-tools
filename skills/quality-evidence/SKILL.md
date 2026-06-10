@@ -227,6 +227,51 @@ observation and evaluation systems can join on them. Keep the map structural:
 proof definitions, proof posture, and proof gaps belong here; time-sensitive run
 outcomes and derived judgments do not.
 
+## Smoke And Health Checks As Evidence
+
+Many release gates are smoke or health checks that run in CI but are not test
+files (exit-code assertions, probes, healthchecks). They are valid runtime
+evidence even without a test file to join on. Two things let Quality Center use
+them:
+
+1. **Author the quality map for the check.** Set `path` to the workflow file that
+   wires the gate (the reviewer opens it to see the check) and `test_case` to the
+   unit being proven — the workflow step, or a finer check name when one step
+   bundles several. Use `type: "smoke"` (or `"script"`); both exist in the schema,
+   do not invent type strings. Set `depth`/`reliability` as for any automated
+   proof. `test_case` matching is case-insensitive; omit it only when one
+   workflow-level pass/fail is all you need. See the worked check entry in
+   `assets/quality-map.template.yaml`.
+
+2. **(Optional) Make the workflow emit a report Quality Center can parse.** If the
+   gate produces no machine-readable result, add or adjust a workflow step that
+   writes a small JSON observation report — see the manifest contract in
+   `assets/observation-sources.template.yaml`. Each record joins to evidence by
+   `(test_file, test_case)`, so the names the workflow emits must match the
+   `test_case` values in the quality map. Only modify a workflow when you are
+   authoring it or the user has authorized the change; otherwise propose the step
+   and leave it to the workflow owner. Without this, the check stays a documented
+   proof with no runtime backing — a legitimate gap, not an error.
+
+The observation source profile says **where** results come from (the workflow and
+its artifact), not the details of the report. For a manifest adapter,
+`artifact_path` is **optional**, but choose deliberately:
+
+- **Omit it only when the artifact is dedicated to observations** — a JSON-only
+  observation bundle (the recommended pattern: a `qc-*` artifact, or a local
+  folder that holds nothing else). Quality Center then reads every JSON file in
+  the source as a manifest.
+- **Set it when the source also holds other JSON** (Playwright reports, release
+  records, etc.). The manifest reader globs every `.json` and tries to parse each
+  one; non-manifest JSON is rejected safely — it never becomes a false
+  observation — but it produces diagnostics and a `partial` execution status,
+  which is misleading noise. Pointing `artifact_path` at the one report avoids it.
+
+If the workflow produces no observation artifact yet, write **no source
+profile** — record the gap and add the profile later, together with the
+workflow-emit step. Do not record run outcomes in the quality map itself — those
+live in the observation source.
+
 ## Quality Policy
 
 Use `quality-policy.yaml` for project-wide proof-strategy guidance that should

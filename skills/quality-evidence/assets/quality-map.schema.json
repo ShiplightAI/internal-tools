@@ -133,6 +133,7 @@
         "id": { "type": "string", "minLength": 1 },
         "type": { "$ref": "#/$defs/evidenceType" },
         "path": { "type": "string" },
+        "test_case": { "type": "string" },
         "url": { "type": "string" },
         "command": { "type": "string" },
         "depth": { "$ref": "#/$defs/depth" },
