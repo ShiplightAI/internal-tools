@@ -1,6 +1,6 @@
 ---
 name: quality-evidence
-description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring Quality Center runtime review when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
+description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring Quality Center runtime review and saved QC reader views when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
@@ -86,7 +86,7 @@ Use these terms consistently in this skill:
 | **Testing what** | The authoring inventory of behaviors, invariants, and risk areas that need confidence. This is the planning input. |
 | **Quality check** | Product-language name for one machine-tracked expectation. Use this phrasing in dashboards, reports, and human explanations. |
 | **Expectation** | The machine-readable structural entry stored under `expectations:` in `quality-map.yaml`. |
-| **Target** | The structured feature target evaluated by Quality Center, usually a feature slug such as `002-example-feature`. Saved product views may later group multiple targets. |
+| **Target** | The structured feature target evaluated by Quality Center, usually a feature slug such as `002-example-feature`. Saved QC views group project-map features for reader filtering. |
 
 Mapping:
 
@@ -162,6 +162,8 @@ Create or update these artifacts:
   `.quality-center/observation-sources.yaml`
 - Repo-wide when Quality-Center-backed runtime review is needed:
   `.quality-center/evaluation-sets.yaml`
+- Repo-wide when users need reusable Quality Center reader slices:
+  `.quality-center/views.yaml`
 
 Use repo-root `quality-policy.yaml` as the canonical project policy location.
 Use `quality-evidence/` for per-target artifacts.
@@ -199,6 +201,14 @@ These schema files mirror the current Quality Center parser contract.
 
 These two files are repo-scoped integration artifacts. They do not replace
 feature `quality-map.yaml` files.
+
+When saved QC reader views are in scope, create or update
+`.quality-center/views.yaml` from `assets/views.template.yaml` and validate
+against `assets/views.schema.json`.
+
+Saved views are repo-scoped QC-owned filters over project-map feature ids. They
+do not replace project maps, feature quality maps, observation sources, or
+evaluation sets.
 
 ## Quality Map
 
@@ -636,17 +646,82 @@ Use this process:
   canonicalization only as a fallback, not as the primary authoring contract.
 - Create one or more saved evaluation sets that bundle the relevant profiles
   into a runnable review unit.
-- Verify the config by scanning the repo in Quality Center and running at least
-  one saved evaluation set.
+- When Quality Center is available, verify the config by scanning the repo and
+  running at least one saved evaluation set. When it is not available, validate
+  the YAML/schema locally and report that QC runtime verification was not run.
 
 Do not blur the responsibilities:
 
 - `quality-map.yaml` answers: what counts as proof for the feature.
 - `observation-sources.yaml` answers: where runtime results come from.
 - `evaluation-sets.yaml` answers: which profiles are reviewed together.
+- `views.yaml` answers: which project-map features should be read together as
+  saved Quality Center reader slices.
 
 Keep runtime review config proportional. Do not create these files just because
 the repo has tests. Create them when the user wants shared runtime review.
+
+### 10. Optional: Create Saved QC Reader Views
+
+Only do this when the user asks for Quality Center saved views, product slices,
+release-area views, team views, or reusable filtered project readers. Do not
+create saved views for every target by default.
+
+Author `.quality-center/views.yaml` directly in the target repo. The Quality
+Center UI can also manage this file, but coding agents should edit the file
+when asked to create repo-owned views.
+
+Use this contract:
+
+```yaml
+views:
+  - id: "release-readiness"
+    name: "Release readiness"
+    description: "Features reviewed together for release readiness."
+    feature_ids:
+      - "001-example-feature"
+      - "002-example-feature"
+```
+
+Rules:
+
+- `id` must be stable, lowercase kebab-case, and unique within the file.
+- `name` must be short and user-facing.
+- `description` is optional but recommended when the grouping is not obvious.
+- `feature_ids` must reference existing primary project-map feature ids exactly:
+  the `features[].id` values from the repo's discovered `project-map.yaml`
+  artifact, usually `.specify/project-map.yaml` or repo-root
+  `project-map.yaml`. These often match feature target slugs, but do not infer
+  them from `quality-evidence/<target>/quality-map.yaml`; read the project map.
+- Each saved view must include at least one feature id.
+- Do not create saved views when the repo has no primary project map; Quality
+  Center has no authoritative feature list to validate the view membership.
+- Do not create a saved view named `whole-project`; Quality Center provides the
+  Whole project reader automatically when no saved view is selected.
+- Keep saved views as reader filters only. Do not duplicate feature metadata,
+  quality checks, evidence paths, observation source profiles, or evaluation-set
+  membership in `views.yaml`.
+- Prefer a small number of meaningful product slices over one view per feature.
+
+Good view boundaries:
+
+- product area or package area
+- release readiness scope
+- team ownership scope
+- customer workflow slice
+- runtime review scope that should be read separately after an evaluation set
+  runs
+
+Verification:
+
+- Confirm the repo has a primary project map and the selected `feature_ids`
+  exist under its `features:` list.
+- Validate against `assets/views.schema.json` when tooling is available.
+- When Quality Center is available, scan the repo and confirm the views appear
+  in the `QC view` selector alongside the built-in `Whole project` option.
+- When Quality Center is available, select each saved view and confirm the
+  visible feature inventory is filtered to the intended feature ids. When it is
+  not available, report that UI verification was not run.
 
 ## Observation Review Setup Guide
 
@@ -686,9 +761,13 @@ Use this compact authoring guide when runtime review setup is requested:
 
 ### C. Verify
 
-- Scan the repo in Quality Center and confirm both files are discovered.
-- Run one saved evaluation set.
-- Confirm Quality Center resolves observations onto the intended evidence paths.
+- When Quality Center is available, scan the repo and confirm both files are
+  discovered.
+- When Quality Center is available, run one saved evaluation set.
+- When Quality Center is available, confirm Quality Center resolves observations
+  onto the intended evidence paths.
+- When Quality Center is not available, validate the YAML/schema locally and
+  report that runtime review verification was not run.
 - If observations are missing, fix the emitted test file path or the structural
   `evidence.path` declaration rather than adding a second mapping table.
 
@@ -852,6 +931,21 @@ evaluation_sets:
 For the full starter, copy `assets/evaluation-sets.template.yaml`.
 For validation, use `assets/evaluation-sets.schema.json`.
 
+`.quality-center/views.yaml`:
+
+```yaml
+views:
+  - id: example-slice
+    name: Example slice
+    description: Reusable reader slice for related project-map features.
+    feature_ids:
+      - 001-example-feature
+      - 002-example-feature
+```
+
+For the full starter, copy `assets/views.template.yaml`.
+For validation, use `assets/views.schema.json`.
+
 `test-report.md`:
 
 ```markdown
@@ -883,18 +977,19 @@ For the full starter, copy `assets/test-report-template.md`.
 - This skill may edit tests, test fixtures, test scripts,
   `quality-evidence/**`, repo-root `quality-policy.yaml`,
   `.quality-center/observation-sources.yaml`,
-  `.quality-center/evaluation-sets.yaml`, and project-standard test evidence
-  folders.
+  `.quality-center/evaluation-sets.yaml`, `.quality-center/views.yaml`, and
+  project-standard test evidence folders.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
   enums, and avoid free-form dialects when a field already exists.
 - Keep `quality-map.yaml` structural only. Do not write current pass/fail state,
   timestamps, freshness, or confidence rollups into it.
-- Keep `.quality-center/observation-sources.yaml` and
-  `.quality-center/evaluation-sets.yaml` repo-scoped. Do not duplicate their
-  source-acquisition or saved-review bundling into feature `quality-map.yaml`.
-  Keep the proof-definition join in feature evidence via canonical
-  repo-relative test file paths.
+- Keep `.quality-center/observation-sources.yaml`,
+  `.quality-center/evaluation-sets.yaml`, and `.quality-center/views.yaml`
+  repo-scoped. Do not duplicate their source-acquisition, saved-review
+  bundling, or reader-slice membership into feature `quality-map.yaml`. Keep the
+  proof-definition join in feature evidence via canonical repo-relative test
+  file paths.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
