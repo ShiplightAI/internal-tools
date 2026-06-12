@@ -1,6 +1,6 @@
 ---
 name: quality-evidence
-description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring Quality Center runtime review and saved QC reader views when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
+description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring runtime review and saved reader views when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
@@ -9,8 +9,8 @@ user_invocable: true
 Quality evidence workflow for features, specs, modules, PRs, tickets, PRDs,
 or user-described changes. Use when the user wants to understand or raise
 confidence in a system through clear quality checks, mapped quality evidence,
-concrete evidence gaps, recommended actions, optional Quality Center runtime
-review wiring, and an auditable pass/fail report.
+concrete evidence gaps, recommended actions, optional runtime review wiring, and
+an auditable pass/fail report.
 
 This skill is Speckit-aware but not Speckit-dependent. It works best when a
 Speckit spec provides the upstream truth; for brownfield projects, it can
@@ -19,9 +19,10 @@ behavior, then mark those checks as `IMPLEMENTATION` or `INFERRED` until the
 user ratifies them. Because it runs standalone, it is the recommended cold-start
 entry point for an un-initialized brownfield repo, before any Spec Kit scaffolding.
 
-In this skill, **Quality Center** means the Shiplight `quality-center`
-product/repo that scans structural artifacts, ingests observations, and
-evaluates saved runtime reviews.
+In this skill, `.quality-center` is the checked-in quality artifact namespace
+that Shiplight tooling reads: observation sources, evaluation sets, saved reader
+views, and generated recommendations. Agents should use
+`@shiplightai/quality-tools` for runtime analysis and generated recommendations.
 
 ## Core Model
 
@@ -54,7 +55,7 @@ Run outcomes, freshness, and current confidence do not belong in
 `quality-map.yaml`. Record those in `test-report.md` and downstream
 observation/evaluation artifacts.
 
-When the user wants Quality Center to consume runtime results, add an optional
+When the user wants runtime review to consume runtime results, add an optional
 second layer:
 
 ```text
@@ -64,7 +65,7 @@ observation-sources.yaml  where runtime results come from
         ↓
 evaluation-sets.yaml      which profiles are reviewed together
         ↓
-Quality Center            observation-backed quality score and review state
+quality-tools analyze     observation-backed recommendations and review state
 ```
 
 Keep the layers separate:
@@ -73,9 +74,21 @@ Keep the layers separate:
 - `.quality-center/observation-sources.yaml` is repo-scoped runtime source
   config.
 - `.quality-center/evaluation-sets.yaml` is repo-scoped review bundling.
-- Observation wiring is optional. Do it when the user wants
-  Quality-Center-backed runtime review, release review, or observation
-  ingestion, not for every structural evidence task.
+- Observation wiring is optional. Do it when the user wants runtime review,
+  release review, or observation ingestion, not for every structural evidence
+  task.
+- Run recommendation analysis through `@shiplightai/quality-tools` when an
+  agent needs to read generated recommendations and iterate on tests,
+  workflows, observation config, evaluation sets, saved views, or quality-map
+  evidence bugs.
+
+Observation-backed evaluation is a join, not a second proof definition. Quality
+tools load observations from the configured sources, normalize them, and join
+them to `quality-map.yaml` evidence by canonical proof-source path plus
+optional `test_case`. Joined observations make the affected expectation
+observed as pass/fail/error/skipped; no matching observation leaves it
+`unobserved`. The quality score is a derived review signal. Do not edit maps or
+scopes to optimize the score.
 
 ## Vocabulary Bridge
 
@@ -86,7 +99,7 @@ Use these terms consistently in this skill:
 | **Testing what** | The authoring inventory of behaviors, invariants, and risk areas that need confidence. This is the planning input. |
 | **Quality check** | Product-language name for one machine-tracked expectation. Use this phrasing in dashboards, reports, and human explanations. |
 | **Expectation** | The machine-readable structural entry stored under `expectations:` in `quality-map.yaml`. |
-| **Target** | The structured feature target evaluated by Quality Center, usually a feature slug such as `002-example-feature`. Saved QC views group project-map features for reader filtering. |
+| **Target** | The structured feature target evaluated by runtime review, usually a feature slug such as `002-example-feature`. Saved views group project-map features for reader filtering. |
 
 Mapping:
 
@@ -95,7 +108,7 @@ Mapping:
   `quality-map.yaml`
 - one `target` contains many `expectations`
 - runtime review config does not remap proof onto expectations
-- Quality Center joins runtime results onto the containing target through the
+- Runtime analysis joins runtime results onto the containing target through the
   proof-source paths already declared on evidence entries
 
 ## Scope Resolution
@@ -158,11 +171,11 @@ Create or update these artifacts:
 - Per target: `quality-evidence/<target-slug>/test-spec.md`
 - Per target: `quality-evidence/<target-slug>/quality-map.yaml`
 - Per target: `quality-evidence/<target-slug>/test-report.md`
-- Repo-wide when Quality-Center-backed runtime review is needed:
+- Repo-wide when runtime review is needed:
   `.quality-center/observation-sources.yaml`
-- Repo-wide when Quality-Center-backed runtime review is needed:
+- Repo-wide when runtime review is needed:
   `.quality-center/evaluation-sets.yaml`
-- Repo-wide when users need reusable Quality Center reader slices:
+- Repo-wide when users need reusable saved reader slices:
   `.quality-center/views.yaml`
 
 Use repo-root `quality-policy.yaml` as the canonical project policy location.
@@ -197,17 +210,18 @@ Validate runtime-review config against:
 - `assets/observation-sources.schema.json`
 - `assets/evaluation-sets.schema.json`
 
-These schema files mirror the current Quality Center parser contract.
+These schema files mirror the current Shiplight quality artifact parser
+contract.
 
 These two files are repo-scoped integration artifacts. They do not replace
 feature `quality-map.yaml` files.
 
-When saved QC reader views are in scope, create or update
+When saved reader views are in scope, create or update
 `.quality-center/views.yaml` from `assets/views.template.yaml` and validate
 against `assets/views.schema.json`.
 
-Saved views are repo-scoped QC-owned filters over project-map feature ids. They
-do not replace project maps, feature quality maps, observation sources, or
+Saved views are repo-scoped reader filters over project-map feature ids. They do
+not replace project maps, feature quality maps, observation sources, or
 evaluation sets.
 
 ## Quality Map
@@ -224,10 +238,10 @@ include:
 - Related implementation tasks when available.
 - Optional per-check policy override when the default proof posture is wrong for
   this check.
-- Evidence definitions for unit, contract, integration, E2E, agent, manual,
-  telemetry, static, smoke, script, or project-specific checks.
-- Evidence-definition metadata such as path or URL, command, depth,
-  reliability, intended contexts, and structural notes.
+- Evidence definitions using schema-valid type, depth, reliability, and
+  context values.
+- Evidence-definition metadata such as path or URL, optional `test_case`,
+  command, intended contexts, and structural notes.
 - Optional proof-gap guidance describing what proof is still missing and which
   proof should be added next.
 
@@ -237,40 +251,61 @@ observation and evaluation systems can join on them. Keep the map structural:
 proof definitions, proof posture, and proof gaps belong here; time-sensitive run
 outcomes and derived judgments do not.
 
+## Runtime Join Contract
+
+Use this contract for every runtime adapter, not only manifest records:
+
+- `evidence.path` is the canonical proof-source identity. Prefer stable
+  repo-relative paths and keep emitted artifact paths aligned with them.
+- `evidence.test_case` is an optional pin within that path. Matching is
+  whitespace-trimmed and case-insensitive.
+- Evidence without `test_case` is file-level and matches any observed test case
+  for the same path.
+- Evidence with `test_case` matches only observations with the same test case.
+- Do not mix pinned and unpinned evidence rows for the same path. A single
+  observation that matches both a file-level row and a pinned row is ambiguous.
+  For shared files or workflow gates, either keep the path file-level or pin
+  each distinct evidence row.
+- Standard adapters populate the observed side from their native report shape:
+  JUnit uses the testcase file plus testcase name, Playwright JSON uses the spec
+  file plus spec title, and manifest records use `test_file` plus `test_case`.
+- If an artifact has no file path and falls back to a class/basename match,
+  `test_case` cannot disambiguate that fallback. Prefer result formats that
+  emit file paths.
+
 ## Smoke And Health Checks As Evidence
 
 Many release gates are smoke or health checks that run in CI but are not test
 files (exit-code assertions, probes, healthchecks). They are valid runtime
-evidence even without a test file to join on. Two things let Quality Center use
-them:
+evidence even without a test file to join on. Two things let runtime analysis
+use them:
 
 1. **Author the quality map for the check.** Set `path` to the workflow file that
    wires the gate (the reviewer opens it to see the check) and `test_case` to the
-   unit being proven — the workflow step, or a finer check name when one step
-   bundles several. Use `type: "smoke"` (or `"script"`); both exist in the schema,
-   do not invent type strings. Set `depth`/`reliability` as for any automated
-   proof. `test_case` matching is case-insensitive; omit it only when one
+   unit being proven: the workflow step, or a finer check name when one step
+   bundles several. Choose a schema-valid evidence type for the gate and
+   validate instead of inventing type strings. Omit `test_case` only when one
    workflow-level pass/fail is all you need. See the worked check entry in
    `assets/quality-map.template.yaml`.
 
-2. **(Optional) Make the workflow emit a report Quality Center can parse.** If the
+2. **(Optional) Make the workflow emit a report runtime analysis can parse.** If the
    gate produces no machine-readable result, add or adjust a workflow step that
    writes a small JSON observation report — see the manifest contract in
-   `assets/observation-sources.template.yaml`. Each record joins to evidence by
-   `(test_file, test_case)`, so the names the workflow emits must match the
-   `test_case` values in the quality map. Only modify a workflow when you are
-   authoring it or the user has authorized the change; otherwise propose the step
-   and leave it to the workflow owner. Without this, the check stays a documented
-   proof with no runtime backing — a legitimate gap, not an error.
+   `assets/observation-sources.template.yaml`. The emitted `test_file` and
+   `test_case` values must follow the Runtime Join Contract. Only modify a
+   workflow when you are authoring it or the user has authorized the change;
+   otherwise propose the step and leave it to the workflow owner. Without this,
+   the check stays a documented proof with no runtime backing — a legitimate
+   gap, not an error.
 
-The observation source profile says **where** results come from (the workflow and
-its artifact), not the details of the report. For a manifest adapter,
+The observation source profile says **where** results come from (the workflow
+and its artifact), not the details of the report. For a manifest adapter,
 `artifact_path` is **optional**, but choose deliberately:
 
 - **Omit it only when the artifact is dedicated to observations** — a JSON-only
   observation bundle (the recommended pattern: a `qc-*` artifact, or a local
-  folder that holds nothing else). Quality Center then reads every JSON file in
-  the source as a manifest.
+  folder that holds nothing else). The manifest adapter then reads every JSON
+  file in the source as a manifest.
 - **Set it when the source also holds other JSON** (Playwright reports, release
   records, etc.). The manifest reader globs every `.json` and tries to parse each
   one; non-manifest JSON is rejected safely — it never becomes a false
@@ -362,10 +397,11 @@ quality-evidence fix-prompts --target 026-enterprise-rate-card --limit 10
 
 When the user wants coding agents to fix many evidence gaps, do not require
 manual copy/paste from a dashboard. Generate prompts directly from the repo's
-quality maps with the bundled script:
+quality maps with the package command:
 
 ```bash
-<skill-dir>/scripts/generate-fix-prompts <repo-root> \
+npx @shiplightai/quality-tools fix-prompts \
+  --project-path <repo-root> \
   --output quality-evidence/fix-prompts.md
 ```
 
@@ -378,14 +414,14 @@ Useful options:
 
 Relative `--output` paths are resolved under `<repo-root>`.
 
-The script scans `quality-evidence/**/quality-map.yaml`. It uses quality-map
+The command scans `quality-evidence/**/quality-map.yaml`. It uses quality-map
 target ids and names for affected feature/spec identity; do not infer feature
 ownership from test file names. It reads structural proof gaps, evidence depth,
 commands, paths, and notes from the current map contract; it does not depend on
 embedded run-state fields. Each prompt separates source-of-truth inputs from
 verification checks so the fixing agent knows what to read versus what to run.
-The bundled helper is TypeScript plus a bash launcher only; do not introduce
-Python or another language for this workflow.
+Use the package command; do not write a custom prompt generator for this
+workflow.
 
 ## Evidence Categories
 
@@ -404,7 +440,11 @@ claims are not enough for browser verification.
 
 ## Coverage Depth
 
-Use depth labels to explain confidence, not just whether a row exists:
+Each status vocabulary below belongs to one artifact; do not mix them across
+artifacts.
+
+Use depth labels on `quality-map.yaml` evidence rows to explain confidence,
+not just whether a row exists:
 
 - `DIRECT`: evidence directly proves the behavior or invariant.
 - `INDIRECT`: evidence exercises the behavior through a broader workflow.
@@ -414,13 +454,20 @@ Use depth labels to explain confidence, not just whether a row exists:
 - `MISSING`: no meaningful evidence found.
 - `BLOCKED`: environment, access, dependency, fixture, or tool limitation.
 
-Use result statuses consistently in reports: `PASS`, `FAIL`, `PARTIAL`,
-`BLOCKED`, `SKIPPED`, `NOT RUN`, `DEFERRED`, `ABORTED`, or `UNKNOWN`.
+Use result statuses for command and test outcomes in `test-report.md`:
+`PASS`, `FAIL`, `PARTIAL`, `BLOCKED`, `SKIPPED`, `NOT RUN`, `DEFERRED`,
+`ABORTED`, or `UNKNOWN`.
 
-Use coverage statuses consistently in matrices: `COVERED`, `PARTIAL`,
-`IMPLICIT`, `NOT COVERED`, `NOT MEASURED`, `MANUAL`, `BLOCKED`, or `DEFERRED`.
+Use coverage statuses in the test report's coverage matrix: `COVERED`,
+`PARTIAL`, `IMPLICIT`, `NOT COVERED`, `NOT MEASURED`, `MANUAL`, `BLOCKED`, or
+`DEFERRED`.
 
-Use overall confidence:
+Runtime analysis output owns its own lowercase vocabularies: observed states
+(`pass`, `fail`, `error`, `skipped`, `unobserved`) and stage statuses
+(`valid`, `partial`, `invalid`). A stage status of `partial` is not the report
+status `PARTIAL`; do not copy runtime vocabularies into authored artifacts.
+
+Use overall confidence in the test report summary:
 
 - `HIGH`: critical testing whats have direct or strong indirect evidence and
   relevant checks passed.
@@ -617,11 +664,10 @@ On repeat runs, refresh current results, preserve useful historical manual logs
 and evidence links, update timestamps, and close deferred items only when new
 evidence actually covers them.
 
-### 9. Optional: Wire Runtime Review Into Quality Center
+### 9. Optional: Wire Runtime Review Config
 
-Only do this step when the user wants Quality-Center-backed runtime review,
-observation ingestion, or release review. Skip it for structural-only
-quality-map work.
+Only do this step when the user wants runtime review, observation ingestion, or
+release review. Skip it for structural-only quality-map work.
 
 Author repo-level runtime review config in two layers:
 
@@ -633,22 +679,14 @@ Use this process:
 - Inspect the repo's existing result producers first:
   - GitHub Actions workflows
   - local result folders
-  - standard artifacts such as JUnit XML or Playwright JSON
-- Prefer standard structured artifacts over custom exporters.
-- Create one **atomic observation source profile** per source integration.
-- Keep profiles acquisition-only: select the workflow or folder and the
-  structured result artifacts inside it.
+  - structured result artifacts already covered by
+    `assets/observation-sources.schema.json`
+- Author and verify both files per the Observation Review Setup Guide below. It
+  is the canonical authoring reference for profiles, evaluation sets, and
+  verification; do not restate its rules here.
 - Use `quality-map.yaml` as the proof-definition source of truth. Runtime join
-  should happen through evidence proof-source paths, not through a second
-  remapping table.
-- Use the repo-relative test file path as the canonical proof-source identity.
-  When an artifact omits the file path, rely on a stable class/basename
-  canonicalization only as a fallback, not as the primary authoring contract.
-- Create one or more saved evaluation sets that bundle the relevant profiles
-  into a runnable review unit.
-- When Quality Center is available, verify the config by scanning the repo and
-  running at least one saved evaluation set. When it is not available, validate
-  the YAML/schema locally and report that QC runtime verification was not run.
+  happens through evidence proof-source paths under the Runtime Join Contract,
+  not through a second remapping table.
 
 Do not blur the responsibilities:
 
@@ -656,20 +694,79 @@ Do not blur the responsibilities:
 - `observation-sources.yaml` answers: where runtime results come from.
 - `evaluation-sets.yaml` answers: which profiles are reviewed together.
 - `views.yaml` answers: which project-map features should be read together as
-  saved Quality Center reader slices.
+  saved reader slices.
+
+When runtime review config exists, run local recommendation analysis from the
+target repo:
+
+```bash
+npx @shiplightai/quality-tools analyze \
+  --project-path <repo-root> \
+  --evaluation-set <evaluation-set-id> \
+  --view <optional-view-id>
+```
+
+The command writes
+`.quality-center/generated/recommendations/<evaluation-set-id>--<scope-id>.json`.
+Read that file as feedback for evidence-system work only: fix tests, workflow
+artifact emission, observation-source config, evaluation-set config, saved-view
+membership, or quality-map proof definitions. Do not optimize the quality score
+as an agent objective, and do not remove scope or weaken quality checks to make
+recommendations disappear. After each fix, rerun the relevant proof commands,
+then rerun analysis until remaining recommendations are low-return, blocked,
+deferred, or require user judgment.
+
+Debug runtime analysis from the generated JSON before editing config:
+
+- `runtime_review.execution_status` and `runtime_review.profiles[]` describe
+  source acquisition and adapter ingestion.
+- `runtime_review.resolution_status` describes whether loaded observations
+  joined to quality-map evidence.
+- `runtime_review.execution_diagnostics` cover source/config/artifact/parser
+  problems.
+- `runtime_review.resolution_diagnostics` cover join-time ambiguity or invalid
+  loaded observations.
+- `runtime_review.resolution_audit` gives matched, unmatched, and ambiguous
+  observation counts plus bounded examples. Use it to distinguish "the artifact
+  was missing" from "the artifact loaded, but its test file or test case did not
+  match evidence."
+- `recommendations[]` lists the concrete quality checks to fix, including
+  `quality_map_path`, `expectation_local_id`, `observed_state`,
+  `proof_source_paths`, `verification_commands`, and the generated agent
+  `prompt`.
+
+Stage statuses are `valid`, `partial`, or `invalid`: `valid` means the stage
+completed without diagnostics, `partial` means usable observations plus
+diagnostics, and `invalid` means diagnostics prevented usable observations for
+that stage.
+
+Use this debugging ladder:
+
+1. Missing credentials or invalid source: fix required env, `source_kind`, repo,
+   workflow, or local-folder config.
+2. Missing artifact match: verify the selected run/folder, `artifact_names`, and
+   adapter `artifact_path`. For manifest adapters without `artifact_path`,
+   confirm the matched artifact actually contains JSON observation manifests.
+3. Invalid observation artifact: fix the report format, parser type, status
+   values, or timestamps emitted by the producer.
+4. Loaded observations but unobserved proof: compare
+   `resolution_audit.unmatched_examples[].test_file` with `evidence.path`.
+5. Same path but still unobserved: compare the observed `test_case` with the
+   quality-map `evidence.test_case`, using the Runtime Join Contract.
+6. Ambiguous proof source: remove overlapping file-level and pinned rows for the
+   same path, or pin every distinct evidence row.
 
 Keep runtime review config proportional. Do not create these files just because
 the repo has tests. Create them when the user wants shared runtime review.
 
-### 10. Optional: Create Saved QC Reader Views
+### 10. Optional: Create Saved Reader Views
 
-Only do this when the user asks for Quality Center saved views, product slices,
-release-area views, team views, or reusable filtered project readers. Do not
-create saved views for every target by default.
+Only do this when the user asks for saved views, product slices, release-area
+views, team views, or reusable filtered project readers. Do not create saved
+views for every target by default.
 
-Author `.quality-center/views.yaml` directly in the target repo. The Quality
-Center UI can also manage this file, but coding agents should edit the file
-when asked to create repo-owned views.
+Author `.quality-center/views.yaml` directly in the target repo when asked to
+create repo-owned views.
 
 Use this contract:
 
@@ -694,10 +791,10 @@ Rules:
   `project-map.yaml`. These often match feature target slugs, but do not infer
   them from `quality-evidence/<target>/quality-map.yaml`; read the project map.
 - Each saved view must include at least one feature id.
-- Do not create saved views when the repo has no primary project map; Quality
-  Center has no authoritative feature list to validate the view membership.
-- Do not create a saved view named `whole-project`; Quality Center provides the
-  Whole project reader automatically when no saved view is selected.
+- Do not create saved views when the repo has no primary project map; there is
+  no authoritative feature list to validate the view membership.
+- Do not create a saved view named `whole-project`; the built-in Whole project
+  scope exists automatically when no saved view is selected.
 - Keep saved views as reader filters only. Do not duplicate feature metadata,
   quality checks, evidence paths, observation source profiles, or evaluation-set
   membership in `views.yaml`.
@@ -717,11 +814,11 @@ Verification:
 - Confirm the repo has a primary project map and the selected `feature_ids`
   exist under its `features:` list.
 - Validate against `assets/views.schema.json` when tooling is available.
-- When Quality Center is available, scan the repo and confirm the views appear
-  in the `QC view` selector alongside the built-in `Whole project` option.
-- When Quality Center is available, select each saved view and confirm the
-  visible feature inventory is filtered to the intended feature ids. When it is
-  not available, report that UI verification was not run.
+- Run `npx @shiplightai/quality-tools analyze --project-path <repo-root>
+  --evaluation-set <evaluation-set-id> --view <view-id>` against at least one
+  relevant evaluation set when runtime artifacts are available. Confirm the
+  generated recommendation scope uses the selected view id and the evaluated
+  target inventory is filtered to the intended feature ids.
 
 ## Observation Review Setup Guide
 
@@ -739,16 +836,20 @@ Use this compact authoring guide when runtime review setup is requested:
   - `source_kind`
   - source-specific config
   - one or more adapters
-- Prefer these adapter inputs:
-  - JUnit XML
-  - Playwright JSON
+- Prefer an adapter from `assets/observation-sources.schema.json` that matches
+  an existing structured result. Use the manifest contract in
+  `assets/observation-sources.template.yaml` for smoke/health checks and other
+  non-test-file gates.
 - Keep adapters acquisition-only:
   - `artifact_path`
-  - parser kind (`junit` or `playwright-json`)
+  - schema-defined parser type
 - Do not add `subject_id`, `evidence_id`, or workflow-step mappings here.
 - The join target already lives in `quality-map.yaml`:
   - `evidence.path` should point at the canonical repo-relative test file path
-  - multiple evidence rows may intentionally share the same file path in v1
+  - multiple evidence rows may intentionally share the same file path in v1,
+    but follow the Runtime Join Contract: keep them all file-level or pin each
+    row with its own `test_case`; do not mix pinned and unpinned rows on the
+    same path
 
 ### B. Author `evaluation-sets.yaml`
 
@@ -761,13 +862,17 @@ Use this compact authoring guide when runtime review setup is requested:
 
 ### C. Verify
 
-- When Quality Center is available, scan the repo and confirm both files are
-  discovered.
-- When Quality Center is available, run one saved evaluation set.
-- When Quality Center is available, confirm Quality Center resolves observations
-  onto the intended evidence paths.
-- When Quality Center is not available, validate the YAML/schema locally and
-  report that runtime review verification was not run.
+- Validate both files against the schema when tooling is available.
+- Run `@shiplightai/quality-tools analyze` for at least one saved evaluation
+  set when required source credentials/artifacts are available. Treat the
+  config as verified only when the intended source profiles execute and any
+  missing-artifact or missing-match diagnostics are explained.
+- Confirm the generated recommendations show observations resolved onto the
+  intended evidence paths and optional `test_case` values. Expected proof
+  sources should show observed states in the runtime review; expected but
+  missing proof remains `unobserved` and visible, not silently omitted.
+- If credentials or artifacts are unavailable, report that runtime analysis
+  could not be run.
 - If observations are missing, fix the emitted test file path or the structural
   `evidence.path` declaration rather than adding a second mapping table.
 
@@ -898,7 +1003,7 @@ validation, use `assets/quality-policy.schema.json`.
 profiles:
   - id: example-workflow
     name: Example workflow
-    source_kind: github-actions # github-actions | local-folder
+    source_kind: github-actions
     source_refs: []
     auth:
       required_env: [GITHUB_TOKEN]
@@ -908,11 +1013,16 @@ profiles:
       artifact_names: [qc-observations-*]
     adapters:
       - id: browser-junit
-        type: junit # junit | playwright-json
+        type: junit
         artifact_path: artifacts/browser.junit.xml
       - id: browser-json
         type: playwright-json
         artifact_path: artifacts/browser.playwright.json
+      - id: release-smoke-manifest
+        type: manifest
+        # artifact_path is optional for manifest adapters; set it when the
+        # source artifact also contains non-observation JSON.
+        artifact_path: artifacts/qc/smoke-observations.json
 ```
 
 For the full starter, copy `assets/observation-sources.template.yaml`.

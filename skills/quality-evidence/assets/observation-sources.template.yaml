@@ -1,8 +1,8 @@
 profiles:
   - id: "example-workflow"
     name: "Example workflow"
-    description: "Fetch runtime artifacts that Quality Center can join onto existing quality-map evidence paths."
-    source_kind: "github-actions" # github-actions | local-folder
+    description: "Fetch runtime artifacts that runtime analysis can join onto existing quality-map evidence paths."
+    source_kind: "github-actions"
 
     source_refs:
       - path: ".github/workflows/publish.yml"
@@ -27,7 +27,7 @@ profiles:
     adapters:
       - id: "browser-junit"
         name: "Browser JUnit"
-        type: "junit" # junit | playwright-json | manifest
+        type: "junit"
         artifact_path: "cli/browser-e2e.junit.xml"
 
       - id: "shared-sdk-junit"
@@ -52,7 +52,8 @@ profiles:
 #       "test_case": "agent_payload", "status": "pass" }
 #   ]
 #   - test_file: matches quality-map evidence.path (the workflow file for checks).
-#   - test_case: matches evidence.test_case; omit for file-level (case-agnostic) proof.
+#   - test_case: matches evidence.test_case; omit for file-level proof. The same
+#     path/test_case pinning semantics apply to every adapter.
 #   - status: pass | fail | error | skipped (case-insensitive; passed/ok/failed accepted).
 #   - Optional per-record: observed_at (ISO), note.
 #   - The top-level may also be { "observations": [ ... ] }.
