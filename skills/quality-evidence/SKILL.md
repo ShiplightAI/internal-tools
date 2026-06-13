@@ -1,16 +1,23 @@
 ---
 name: quality-evidence
-description: Assess and improve quality evidence for a feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, wiring runtime review and saved reader views when needed, running verification, and writing clear confidence reports. Speckit-aware but not Speckit-dependent.
+description: Assess and improve quality evidence for one feature or spec by defining what must be proven, mapping risk-weighted executable evidence in quality-map.yaml, adding worthwhile tests or checks, running verification, and writing clear confidence reports. Feature-scoped sibling of the repo-scoped quality-center skill, which owns runtime review wiring, saved views, and cross-feature improvement. Speckit-aware but not Speckit-dependent.
 user_invocable: true
 ---
 
 # Quality Evidence
 
-Quality evidence workflow for features, specs, modules, PRs, tickets, PRDs,
-or user-described changes. Use when the user wants to understand or raise
-confidence in a system through clear quality checks, mapped quality evidence,
-concrete evidence gaps, recommended actions, optional runtime review wiring, and
-an auditable pass/fail report.
+Quality evidence workflow for one feature, spec, module, PR, ticket, PRD,
+or user-described change at a time. Use when the user wants to understand or
+raise confidence in a feature through clear quality checks, mapped quality
+evidence, concrete evidence gaps, recommended actions, and an auditable
+pass/fail report.
+
+This skill is feature-scoped. Project-wide quality improvement — wiring runtime
+review, evaluation sets, saved reader views, running
+`@shiplightai/quality-tools analyze`, and working down generated
+recommendations across many feature maps — belongs to the `quality-center`
+skill. When the user's request is about overall project quality rather than one
+feature's evidence, use that skill instead of inventing a feature target here.
 
 This skill is Speckit-aware but not Speckit-dependent. It works best when a
 Speckit spec provides the upstream truth; for brownfield projects, it can
@@ -21,8 +28,8 @@ entry point for an un-initialized brownfield repo, before any Spec Kit scaffoldi
 
 In this skill, `.quality-center` is the checked-in quality artifact namespace
 that Shiplight tooling reads: observation sources, evaluation sets, saved reader
-views, and generated recommendations. Agents should use
-`@shiplightai/quality-tools` for runtime analysis and generated recommendations.
+views, and generated recommendations. Those files are authored and maintained by
+the `quality-center` skill, not this one.
 
 ## Core Model
 
@@ -55,40 +62,19 @@ Run outcomes, freshness, and current confidence do not belong in
 `quality-map.yaml`. Record those in `test-report.md` and downstream
 observation/evaluation artifacts.
 
-When the user wants runtime review to consume runtime results, add an optional
-second layer:
-
-```text
-quality-map.yaml          structural proof definition
-        ↓
-observation-sources.yaml  where runtime results come from
-        ↓
-evaluation-sets.yaml      which profiles are reviewed together
-        ↓
-quality-tools analyze     observation-backed recommendations and review state
-```
-
-Keep the layers separate:
+Runtime review adds an optional repo-scoped layer on top of feature maps:
+observation sources, evaluation sets, and `quality-tools analyze`. That layer
+is owned by the `quality-center` skill. What matters from this side of the
+boundary:
 
 - `quality-map.yaml` stays feature-scoped and structural.
-- `.quality-center/observation-sources.yaml` is repo-scoped runtime source
-  config.
-- `.quality-center/evaluation-sets.yaml` is repo-scoped review bundling.
-- Observation wiring is optional. Do it when the user wants runtime review,
-  release review, or observation ingestion, not for every structural evidence
-  task.
-- Run recommendation analysis through `@shiplightai/quality-tools` when an
-  agent needs to read generated recommendations and iterate on tests,
-  workflows, observation config, evaluation sets, saved views, or quality-map
-  evidence bugs.
-
-Observation-backed evaluation is a join, not a second proof definition. Quality
-tools load observations from the configured sources, normalize them, and join
-them to `quality-map.yaml` evidence by canonical proof-source path plus
-optional `test_case`. Joined observations make the affected expectation
-observed as pass/fail/error/skipped; no matching observation leaves it
-`unobserved`. The quality score is a derived review signal. Do not edit maps or
-scopes to optimize the score.
+- Observation-backed evaluation is a join, not a second proof definition.
+  Quality tools join runtime observations to `quality-map.yaml` evidence by
+  canonical proof-source path plus optional `test_case` under the Runtime Join
+  Contract below, so evidence `path`/`test_case` values authored here are the
+  join keys runtime review depends on.
+- The quality score is a derived review signal. Do not edit maps or scopes to
+  optimize the score.
 
 ## Vocabulary Bridge
 
@@ -99,7 +85,7 @@ Use these terms consistently in this skill:
 | **Testing what** | The authoring inventory of behaviors, invariants, and risk areas that need confidence. This is the planning input. |
 | **Quality check** | Product-language name for one machine-tracked expectation. Use this phrasing in dashboards, reports, and human explanations. |
 | **Expectation** | The machine-readable structural entry stored under `expectations:` in `quality-map.yaml`. |
-| **Target** | The structured feature target evaluated by runtime review, usually a feature slug such as `002-example-feature`. Saved views group project-map features for reader filtering. |
+| **Target** | The single feature or spec this skill works on, identified by a feature slug such as `002-example-feature`. Runtime review and saved views (quality-center skill) evaluate and group targets downstream. |
 
 Mapping:
 
@@ -119,7 +105,12 @@ route, module, workflow, branch diff, or implementation area. Quality checks and
 evidence always belong to a feature; features and specs are cleanly separated.
 
 This skill does not produce a project-scope quality map. Project-level quality
-is an aggregate of the individual feature maps.
+is an aggregate of the individual feature maps, reviewed through the
+`quality-center` skill.
+
+If the request has no single feature target — "improve quality across the
+repo", "act on the latest recommendations", "review the release view" — do not
+force one. Hand off to the `quality-center` skill instead.
 
 Use explicit user input first. If the user does not provide a source, silently
 infer the target from current git changes, repo structure, docs, tests, package
@@ -139,7 +130,8 @@ routes can be joined reliably.
   feature is `quality-evidence/NNN-feature-name/`.
 - If no numeric source exists, choose the next unused three-digit prefix in the
   repo's feature sequence before creating the target. Record the choice in
-  `quality-map.yaml`.
+  `quality-map.yaml`. Mint a new slug only for a genuine feature or spec; never
+  mint one to host project-wide or multi-feature quality work.
 - If legacy unnumbered artifacts exist for a numbered feature, migrate or update
   toward the canonical numbered slug instead of creating a second parallel
   quality target. Preserve old slugs under `target.aliases` when useful.
@@ -171,12 +163,10 @@ Create or update these artifacts:
 - Per target: `quality-evidence/<target-slug>/test-spec.md`
 - Per target: `quality-evidence/<target-slug>/quality-map.yaml`
 - Per target: `quality-evidence/<target-slug>/test-report.md`
-- Repo-wide when runtime review is needed:
-  `.quality-center/observation-sources.yaml`
-- Repo-wide when runtime review is needed:
-  `.quality-center/evaluation-sets.yaml`
-- Repo-wide when users need reusable saved reader slices:
-  `.quality-center/views.yaml`
+
+Repo-scoped `.quality-center/*` files (observation sources, evaluation sets,
+saved views) are authored by the `quality-center` skill; this skill does not
+create or edit them.
 
 Use repo-root `quality-policy.yaml` as the canonical project policy location.
 Use `quality-evidence/` for per-target artifacts.
@@ -196,33 +186,15 @@ validate against `assets/quality-map.schema.json`.
 When project-specific proof posture needs to be shared across features, create
 or update repo-root `quality-policy.yaml` from
 `assets/quality-policy.template.yaml` and validate against
-`assets/quality-policy.schema.json`.
+`assets/quality-policy.schema.json`. Repo-root policy changes affect every
+feature's resolved posture; confirm them with the user first (see Testing
+Strategy And Budget Policy).
 
-When runtime review setup is in scope, create or update:
-
-- `.quality-center/observation-sources.yaml` from
-  `assets/observation-sources.template.yaml`
-- `.quality-center/evaluation-sets.yaml` from
-  `assets/evaluation-sets.template.yaml`
-
-Validate runtime-review config against:
-
-- `assets/observation-sources.schema.json`
-- `assets/evaluation-sets.schema.json`
-
-These schema files mirror the current Shiplight quality artifact parser
-contract.
-
-These two files are repo-scoped integration artifacts. They do not replace
-feature `quality-map.yaml` files.
-
-When saved reader views are in scope, create or update
-`.quality-center/views.yaml` from `assets/views.template.yaml` and validate
-against `assets/views.schema.json`.
-
-Saved views are repo-scoped reader filters over project-map feature ids. They do
-not replace project maps, feature quality maps, observation sources, or
-evaluation sets.
+When runtime review, observation ingestion, or saved reader views come up
+during a feature pass, author the map side here (evidence `path` and
+`test_case` per the Runtime Join Contract), record any missing runtime backing
+as a proof gap, and hand the `.quality-center/*` wiring to the
+`quality-center` skill.
 
 ## Quality Map
 
@@ -253,7 +225,10 @@ outcomes and derived judgments do not.
 
 ## Runtime Join Contract
 
-Use this contract for every runtime adapter, not only manifest records:
+This contract is the canonical interface between feature quality maps and
+runtime review. The `quality-center` skill's observation adapters consume it;
+evidence authored here must honor it. Use it for every runtime adapter, not
+only manifest records:
 
 - `evidence.path` is the canonical proof-source identity. Prefer stable
   repo-relative paths and keep emitted artifact paths aligned with them.
@@ -288,34 +263,15 @@ use them:
    workflow-level pass/fail is all you need. See the worked check entry in
    `assets/quality-map.template.yaml`.
 
-2. **(Optional) Make the workflow emit a report runtime analysis can parse.** If the
-   gate produces no machine-readable result, add or adjust a workflow step that
-   writes a small JSON observation report — see the manifest contract in
-   `assets/observation-sources.template.yaml`. The emitted `test_file` and
-   `test_case` values must follow the Runtime Join Contract. Only modify a
-   workflow when you are authoring it or the user has authorized the change;
-   otherwise propose the step and leave it to the workflow owner. Without this,
-   the check stays a documented proof with no runtime backing — a legitimate
-   gap, not an error.
+2. **(Optional) Make the workflow emit a report runtime analysis can parse.**
+   This is the source side, owned by the `quality-center` skill
+   (Workflow-Emitted Observations and its manifest contract). From this skill,
+   author the map side, record the missing runtime backing as a proof gap when
+   no parseable report exists — a legitimate gap, not an error — and hand the
+   workflow-emit step and observation source profile to `quality-center`.
 
-The observation source profile says **where** results come from (the workflow
-and its artifact), not the details of the report. For a manifest adapter,
-`artifact_path` is **optional**, but choose deliberately:
-
-- **Omit it only when the artifact is dedicated to observations** — a JSON-only
-  observation bundle (the recommended pattern: a `qc-*` artifact, or a local
-  folder that holds nothing else). The manifest adapter then reads every JSON
-  file in the source as a manifest.
-- **Set it when the source also holds other JSON** (Playwright reports, release
-  records, etc.). The manifest reader globs every `.json` and tries to parse each
-  one; non-manifest JSON is rejected safely — it never becomes a false
-  observation — but it produces diagnostics and a `partial` execution status,
-  which is misleading noise. Pointing `artifact_path` at the one report avoids it.
-
-If the workflow produces no observation artifact yet, write **no source
-profile** — record the gap and add the profile later, together with the
-workflow-emit step. Do not record run outcomes in the quality map itself — those
-live in the observation source.
+Do not record run outcomes in the quality map itself — those live in the
+observation source.
 
 ## Quality Policy
 
@@ -388,40 +344,26 @@ to a lightweight baseline:
 
 Invocation shortcut: `fix-prompts`.
 
-When the user says `quality-evidence fix-prompts`, interpret it as this workflow.
+When the user says `quality-evidence fix-prompts`, interpret it as generating
+fix prompts for the current feature target with the package command:
+
+```bash
+npx @shiplightai/quality-tools fix-prompts \
+  --project-path <repo-root> \
+  --target <target-id> \
+  --output quality-evidence/fix-prompts.md
+```
+
 Accept script-style options after the shortcut, for example:
 
 ```text
 quality-evidence fix-prompts --target 026-enterprise-rate-card --limit 10
 ```
 
-When the user wants coding agents to fix many evidence gaps, do not require
-manual copy/paste from a dashboard. Generate prompts directly from the repo's
-quality maps with the package command:
-
-```bash
-npx @shiplightai/quality-tools fix-prompts \
-  --project-path <repo-root> \
-  --output quality-evidence/fix-prompts.md
-```
-
-Useful options:
-
-- `--format json` for automation.
-- `--target <target-id>` for one feature target.
-- `--limit <n>` for the highest-priority prompts only.
-- `--include-covered` when auditing every quality check, not just open gaps.
-
-Relative `--output` paths are resolved under `<repo-root>`.
-
-The command scans `quality-evidence/**/quality-map.yaml`. It uses quality-map
-target ids and names for affected feature/spec identity; do not infer feature
-ownership from test file names. It reads structural proof gaps, evidence depth,
-commands, paths, and notes from the current map contract; it does not depend on
-embedded run-state fields. Each prompt separates source-of-truth inputs from
-verification checks so the fixing agent knows what to read versus what to run.
-Use the package command; do not write a custom prompt generator for this
-workflow.
+Use the package command; do not write a custom prompt generator. Each prompt
+separates source-of-truth inputs from verification checks so the fixing agent
+knows what to read versus what to run. Repo-wide fix-prompt generation across
+all feature maps is documented in the `quality-center` skill.
 
 ## Evidence Categories
 
@@ -499,7 +441,11 @@ governs how hard to push for evidence (strategy), not how the result is scored.
 
 If the same proof-strategy decision keeps recurring across multiple expectations,
 promote it out of per-expectation overrides and into repo-root
-`quality-policy.yaml`.
+`quality-policy.yaml`. Treat that promotion as a deliberate project-wide change:
+the policy alters the resolved posture for every feature, so confirm it with the
+user instead of editing repo-root policy silently mid-pass. When the user is not
+available, record the recommended promotion in `proof_gap.next_step` or the test
+report and keep the decision as a per-expectation override.
 
 ## Workflow
 
@@ -664,217 +610,18 @@ On repeat runs, refresh current results, preserve useful historical manual logs
 and evidence links, update timestamps, and close deferred items only when new
 evidence actually covers them.
 
-### 9. Optional: Wire Runtime Review Config
+### 9. Optional: Hand Off Runtime Review
 
-Only do this step when the user wants runtime review, observation ingestion, or
-release review. Skip it for structural-only quality-map work.
+Only relevant when the user wants runtime review, observation ingestion,
+release review, or saved reader views. Skip it for structural-only quality-map
+work.
 
-Author repo-level runtime review config in two layers:
-
-1. `.quality-center/observation-sources.yaml`
-2. `.quality-center/evaluation-sets.yaml`
-
-Use this process:
-
-- Inspect the repo's existing result producers first:
-  - GitHub Actions workflows
-  - local result folders
-  - structured result artifacts already covered by
-    `assets/observation-sources.schema.json`
-- Author and verify both files per the Observation Review Setup Guide below. It
-  is the canonical authoring reference for profiles, evaluation sets, and
-  verification; do not restate its rules here.
-- Use `quality-map.yaml` as the proof-definition source of truth. Runtime join
-  happens through evidence proof-source paths under the Runtime Join Contract,
-  not through a second remapping table.
-
-Do not blur the responsibilities:
-
-- `quality-map.yaml` answers: what counts as proof for the feature.
-- `observation-sources.yaml` answers: where runtime results come from.
-- `evaluation-sets.yaml` answers: which profiles are reviewed together.
-- `views.yaml` answers: which project-map features should be read together as
-  saved reader slices.
-
-When runtime review config exists, run local recommendation analysis from the
-target repo:
-
-```bash
-npx @shiplightai/quality-tools analyze \
-  --project-path <repo-root> \
-  --evaluation-set <evaluation-set-id> \
-  --view <optional-view-id>
-```
-
-The command writes
-`.quality-center/generated/recommendations/<evaluation-set-id>--<scope-id>.json`.
-Read that file as feedback for evidence-system work only: fix tests, workflow
-artifact emission, observation-source config, evaluation-set config, saved-view
-membership, or quality-map proof definitions. Do not optimize the quality score
-as an agent objective, and do not remove scope or weaken quality checks to make
-recommendations disappear. After each fix, rerun the relevant proof commands,
-then rerun analysis until remaining recommendations are low-return, blocked,
-deferred, or require user judgment.
-
-Debug runtime analysis from the generated JSON before editing config:
-
-- `runtime_review.execution_status` and `runtime_review.profiles[]` describe
-  source acquisition and adapter ingestion.
-- `runtime_review.resolution_status` describes whether loaded observations
-  joined to quality-map evidence.
-- `runtime_review.execution_diagnostics` cover source/config/artifact/parser
-  problems.
-- `runtime_review.resolution_diagnostics` cover join-time ambiguity or invalid
-  loaded observations.
-- `runtime_review.resolution_audit` gives matched, unmatched, and ambiguous
-  observation counts plus bounded examples. Use it to distinguish "the artifact
-  was missing" from "the artifact loaded, but its test file or test case did not
-  match evidence."
-- `recommendations[]` lists the concrete quality checks to fix, including
-  `quality_map_path`, `expectation_local_id`, `observed_state`,
-  `proof_source_paths`, `verification_commands`, and the generated agent
-  `prompt`.
-
-Stage statuses are `valid`, `partial`, or `invalid`: `valid` means the stage
-completed without diagnostics, `partial` means usable observations plus
-diagnostics, and `invalid` means diagnostics prevented usable observations for
-that stage.
-
-Use this debugging ladder:
-
-1. Missing credentials or invalid source: fix required env, `source_kind`, repo,
-   workflow, or local-folder config.
-2. Missing artifact match: verify the selected run/folder, `artifact_names`, and
-   adapter `artifact_path`. For manifest adapters without `artifact_path`,
-   confirm the matched artifact actually contains JSON observation manifests.
-3. Invalid observation artifact: fix the report format, parser type, status
-   values, or timestamps emitted by the producer.
-4. Loaded observations but unobserved proof: compare
-   `resolution_audit.unmatched_examples[].test_file` with `evidence.path`.
-5. Same path but still unobserved: compare the observed `test_case` with the
-   quality-map `evidence.test_case`, using the Runtime Join Contract.
-6. Ambiguous proof source: remove overlapping file-level and pinned rows for the
-   same path, or pin every distinct evidence row.
-
-Keep runtime review config proportional. Do not create these files just because
-the repo has tests. Create them when the user wants shared runtime review.
-
-### 10. Optional: Create Saved Reader Views
-
-Only do this when the user asks for saved views, product slices, release-area
-views, team views, or reusable filtered project readers. Do not create saved
-views for every target by default.
-
-Author `.quality-center/views.yaml` directly in the target repo when asked to
-create repo-owned views.
-
-Use this contract:
-
-```yaml
-views:
-  - id: "release-readiness"
-    name: "Release readiness"
-    description: "Features reviewed together for release readiness."
-    feature_ids:
-      - "001-example-feature"
-      - "002-example-feature"
-```
-
-Rules:
-
-- `id` must be stable, lowercase kebab-case, and unique within the file.
-- `name` must be short and user-facing.
-- `description` is optional but recommended when the grouping is not obvious.
-- `feature_ids` must reference existing primary project-map feature ids exactly:
-  the `features[].id` values from the repo's discovered `project-map.yaml`
-  artifact, usually `.specify/project-map.yaml` or repo-root
-  `project-map.yaml`. These often match feature target slugs, but do not infer
-  them from `quality-evidence/<target>/quality-map.yaml`; read the project map.
-- Each saved view must include at least one feature id.
-- Do not create saved views when the repo has no primary project map; there is
-  no authoritative feature list to validate the view membership.
-- Do not create a saved view named `whole-project`; the built-in Whole project
-  scope exists automatically when no saved view is selected.
-- Keep saved views as reader filters only. Do not duplicate feature metadata,
-  quality checks, evidence paths, observation source profiles, or evaluation-set
-  membership in `views.yaml`.
-- Prefer a small number of meaningful product slices over one view per feature.
-
-Good view boundaries:
-
-- product area or package area
-- release readiness scope
-- team ownership scope
-- customer workflow slice
-- runtime review scope that should be read separately after an evaluation set
-  runs
-
-Verification:
-
-- Confirm the repo has a primary project map and the selected `feature_ids`
-  exist under its `features:` list.
-- Validate against `assets/views.schema.json` when tooling is available.
-- Run `npx @shiplightai/quality-tools analyze --project-path <repo-root>
-  --evaluation-set <evaluation-set-id> --view <view-id>` against at least one
-  relevant evaluation set when runtime artifacts are available. Confirm the
-  generated recommendation scope uses the selected view id and the evaluated
-  target inventory is filtered to the intended feature ids.
-
-## Observation Review Setup Guide
-
-Use this compact authoring guide when runtime review setup is requested:
-
-### A. Author `observation-sources.yaml`
-
-- One profile per source integration.
-- Good profile boundaries:
-  - one GitHub workflow
-  - one local artifact folder
-- Required fields:
-  - `id`
-  - `name`
-  - `source_kind`
-  - source-specific config
-  - one or more adapters
-- Prefer an adapter from `assets/observation-sources.schema.json` that matches
-  an existing structured result. Use the manifest contract in
-  `assets/observation-sources.template.yaml` for smoke/health checks and other
-  non-test-file gates.
-- Keep adapters acquisition-only:
-  - `artifact_path`
-  - schema-defined parser type
-- Do not add `subject_id`, `evidence_id`, or workflow-step mappings here.
-- The join target already lives in `quality-map.yaml`:
-  - `evidence.path` should point at the canonical repo-relative test file path
-  - multiple evidence rows may intentionally share the same file path in v1,
-    but follow the Runtime Join Contract: keep them all file-level or pin each
-    row with its own `test_case`; do not mix pinned and unpinned rows on the
-    same path
-
-### B. Author `evaluation-sets.yaml`
-
-- One evaluation set per shared review unit.
-- A set references one or more profile ids in precedence order.
-- If a user wants to debug one profile in isolation, use a single-profile
-  evaluation set instead of inventing a separate product concept.
-- Scope filtering happens later at the project or saved-view level, not in the
-  evaluation set.
-
-### C. Verify
-
-- Validate both files against the schema when tooling is available.
-- Run `@shiplightai/quality-tools analyze` for at least one saved evaluation
-  set when required source credentials/artifacts are available. Treat the
-  config as verified only when the intended source profiles execute and any
-  missing-artifact or missing-match diagnostics are explained.
-- Confirm the generated recommendations show observations resolved onto the
-  intended evidence paths and optional `test_case` values. Expected proof
-  sources should show observed states in the runtime review; expected but
-  missing proof remains `unobserved` and visible, not silently omitted.
-- If credentials or artifacts are unavailable, report that runtime analysis
-  could not be run.
-- If observations are missing, fix the emitted test file path or the structural
-  `evidence.path` declaration rather than adding a second mapping table.
+This skill's contribution is the map side: evidence `path` and `test_case`
+values that honor the Runtime Join Contract, and proof gaps recording any
+missing runtime backing. The repo-scoped wiring — observation sources,
+evaluation sets, saved views, `quality-tools analyze`, and recommendation
+triage — is the `quality-center` skill's workflow. Hand off to it rather than
+authoring `.quality-center/*` files here.
 
 ## Specialized Test Authoring
 
@@ -997,64 +744,8 @@ rules:
 For the full starter, copy `assets/quality-policy.template.yaml`. For
 validation, use `assets/quality-policy.schema.json`.
 
-`.quality-center/observation-sources.yaml`:
-
-```yaml
-profiles:
-  - id: example-workflow
-    name: Example workflow
-    source_kind: github-actions
-    source_refs: []
-    auth:
-      required_env: [GITHUB_TOKEN]
-    github:
-      repo: org/repo
-      workflow: publish.yml
-      artifact_names: [qc-observations-*]
-    adapters:
-      - id: browser-junit
-        type: junit
-        artifact_path: artifacts/browser.junit.xml
-      - id: browser-json
-        type: playwright-json
-        artifact_path: artifacts/browser.playwright.json
-      - id: release-smoke-manifest
-        type: manifest
-        # artifact_path is optional for manifest adapters; set it when the
-        # source artifact also contains non-observation JSON.
-        artifact_path: artifacts/qc/smoke-observations.json
-```
-
-For the full starter, copy `assets/observation-sources.template.yaml`.
-For validation, use `assets/observation-sources.schema.json`.
-
-`.quality-center/evaluation-sets.yaml`:
-
-```yaml
-evaluation_sets:
-  - id: example-review
-    name: Example review
-    profiles:
-      - profile_id: example-workflow
-```
-
-For the full starter, copy `assets/evaluation-sets.template.yaml`.
-For validation, use `assets/evaluation-sets.schema.json`.
-
-`.quality-center/views.yaml`:
-
-```yaml
-views:
-  - id: example-slice
-    name: Example slice
-    description: Reusable reader slice for related project-map features.
-    feature_ids:
-      - 001-example-feature
-      - 002-example-feature
-```
-
-For the full starter, copy `assets/views.template.yaml`.
-For validation, use `assets/views.schema.json`.
+For `.quality-center/*` skeletons (observation sources, evaluation sets, saved
+views), see the `quality-center` skill.
 
 `test-report.md`:
 
@@ -1085,21 +776,19 @@ For the full starter, copy `assets/test-report-template.md`.
 ## Operating Rules
 
 - This skill may edit tests, test fixtures, test scripts,
-  `quality-evidence/**`, repo-root `quality-policy.yaml`,
-  `.quality-center/observation-sources.yaml`,
-  `.quality-center/evaluation-sets.yaml`, `.quality-center/views.yaml`, and
-  project-standard test evidence folders.
+  `quality-evidence/**`, repo-root `quality-policy.yaml` (only with user
+  confirmation, since policy changes affect every feature), and
+  project-standard test evidence folders. It does not create or edit
+  `.quality-center/**`; that namespace belongs to the `quality-center` skill.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Keep `quality-map.yaml` stable enough for tools: preserve ids, use the schema
   enums, and avoid free-form dialects when a field already exists.
 - Keep `quality-map.yaml` structural only. Do not write current pass/fail state,
   timestamps, freshness, or confidence rollups into it.
-- Keep `.quality-center/observation-sources.yaml`,
-  `.quality-center/evaluation-sets.yaml`, and `.quality-center/views.yaml`
-  repo-scoped. Do not duplicate their source-acquisition, saved-review
-  bundling, or reader-slice membership into feature `quality-map.yaml`. Keep the
-  proof-definition join in feature evidence via canonical repo-relative test
-  file paths.
+- Do not duplicate `.quality-center/*` source-acquisition, saved-review
+  bundling, or reader-slice membership into feature `quality-map.yaml`. Keep
+  the proof-definition join in feature evidence via canonical repo-relative
+  test file paths.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets, or
   private customer data in specs, reports, logs, or artifacts.
 - Never report pass/fail without command output, automated test evidence, or
@@ -1116,6 +805,9 @@ For the full starter, copy `assets/test-report-template.md`.
 
 ## When Not To Use
 
+- When the user wants project-wide quality improvement, runtime review wiring,
+  evaluation sets, saved views, or recommendation-driven work across many
+  features: use the `quality-center` skill.
 - When the user only wants a code review with no evidence-quality assessment.
 - When implementation does not exist and the user only wants product planning.
 - When the user wants only a narrow command run and no quality mapping.

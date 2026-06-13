@@ -16,15 +16,18 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
 | `speckit-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, brownfield reconstruction, and feature lifecycle sequencing. |
-| `quality-evidence` | Assess and improve quality evidence for a project or feature, map coverage depth, run verification, add worthwhile tests/checks, and write user-facing confidence reports. |
+| `quality-evidence` | Assess and improve quality evidence for one feature or spec: map coverage depth, run verification, add worthwhile tests/checks, and write user-facing confidence reports. |
+| `quality-center` | Improve overall project quality across features: wire runtime review (observation sources, evaluation sets), author saved reader views, run `quality-tools analyze`, and triage generated recommendations. Repo-scoped sibling of `quality-evidence`. |
 | `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
 | `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
 
 Skills bundle their own starter assets and copy them into a target repo on
 demand, so there is nothing extra to install:
 
-- `quality-evidence/assets/`: quality-map template and schema, plus
-  test-spec/report templates.
+- `quality-evidence/assets/`: quality-map and quality-policy templates and
+  schemas, plus test-spec/report templates.
+- `quality-center/assets/`: observation-sources, evaluation-sets, and views
+  templates and schemas for `.quality-center/` runtime-review config.
 - `create-agent-tests/assets/`: the `run-agent-verification.ts` runner, the
   agent-test case template, and an example suites manifest, with runner setup
   documented in `create-agent-tests/references/runner.md`. These are copied into
@@ -63,6 +66,7 @@ CLI can use when cloning `ShiplightAI/internal-agent-skills`.
 npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill speckit-project -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill quality-evidence -a codex -y
+npx skills add ShiplightAI/internal-agent-skills --skill quality-center -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill create-agent-tests -a codex -y
 ```
 
