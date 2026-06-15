@@ -82,7 +82,7 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
    - Present the feature list with source type and open questions.
    - Ask the user to accept, split, merge, rename, defer, or reject features.
 
-7. **Backfill Speckit specs**
+7. **Backfill Spec Kit specs**
    - For ratified features, create `specs/NNN-feature-name/spec.md`.
    - Make clear which requirements are `SOURCE` and which are reconstructed
      from implementation.

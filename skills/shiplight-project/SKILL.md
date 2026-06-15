@@ -1,16 +1,16 @@
 ---
-name: speckit-project
-description: "Orchestrate project-level Spec Kit development: PRDs, roadmap and feature breakdown, project-map traceability, active feature selection, brownfield reconstruction from existing docs/code/tests, and sequencing of Speckit, verify, quality-evidence, and code-review workflows."
+name: shiplight-project
+description: "Orchestrate project-level Spec Kit development: PRDs, roadmap and feature breakdown, project-map traceability, active feature selection, change classification (new feature vs cross-cutting refactor/bug fix), brownfield reconstruction from existing docs/code/tests, and sequencing of Spec Kit, verify, quality-evidence, and code-review workflows."
 user_invocable: true
 ---
 
-# Speckit Project
+# Shiplight Project
 
 Project-level operating workflow for Spec Kit projects. Use this when the user
 wants to create or refine a PRD, break a product into numbered features, select
 or switch the active feature, build project-level traceability, reconstruct
 features from an existing codebase, or drive the full project workflow across
-Speckit, verification, quality-evidence, and review.
+Spec Kit, verification, quality-evidence, and review.
 
 This skill is the orchestrator. It should call or sequence feature-level skills
 instead of duplicating them.
@@ -26,17 +26,19 @@ foundations:
    - The target repo has already run the `specify init` command for the current
      coding agent. For Codex skills mode, use the Spec Kit Codex integration
      with skills enabled.
-   - Speckit commands or skills from `specify init` are available for the active
+   - Spec Kit commands or skills from `specify init` are available for the active
      agent.
    - Reference: https://github.com/github/spec-kit/blob/main/README.md
 
 2. **Shiplight MCP and skills installed**
    - The Shiplight MCP server is installed for the current agent.
-   - Shiplight skills are installed for the current agent, especially `verify`,
-     `create-tests`, `triage`, and relevant review skills.
+   - Shiplight skills are installed for the current agent. This orchestrator
+     sequences the sibling internal skills it invokes — `quality-evidence`,
+     `code-review-run`, and the test producers (`create-agent-tests`,
+     `create-tests`) — plus public Shiplight skills such as `verify`.
    - Reference: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
 
-These prerequisites gate **mutating** project work — creating Speckit artifacts,
+These prerequisites gate **mutating** project work — creating Spec Kit artifacts,
 backfilling specs, or driving the feature lifecycle. They are **not** required
 for a read-only brownfield assessment: discovering docs/code/tests/trackers,
 proposing a provisional project map, and running a `quality-evidence` confidence
@@ -49,10 +51,10 @@ first.
 ## Default Invocation
 
 When the user invokes this skill without a more specific request, run a
-non-mutating project status pass:
+non-mutating project status pass (mode `status`):
 
 1. Verify prerequisites are present.
-2. Read the current Speckit pointer, branch, project map if present, active
+2. Read the current Spec Kit pointer, branch, project map if present, active
    feature spec/plan/tasks, and recent evidence/review artifacts.
 3. Report current mode, active feature, branch, phase, artifacts found, drift or
    traceability gaps, and the next gate.
@@ -121,7 +123,7 @@ Prefer existing repo conventions. If none exist, use:
   conventions prefer a visible root artifact.
 - `quality-policy.yaml`: project-wide proof-strategy guidance for
   `quality-evidence`.
-- `specs/NNN-feature-name/`: feature-level Speckit artifacts.
+- `specs/NNN-feature-name/`: feature-level Spec Kit artifacts.
 - `quality-evidence/<feature>/`: quality evidence for a feature.
 
 Use bundled assets when creating new files:
@@ -132,7 +134,7 @@ Use bundled assets when creating new files:
 
 Read `references/project-map.md` before creating or significantly changing a
 project map. Read `references/brownfield-reconstruction.md` before deriving
-features from an existing non-Speckit codebase.
+features from an existing non-Spec Kit codebase.
 
 `assets/project-map.template.yaml` is the single source of truth for project map
 shape. When a map is missing, stale, or needs repair, read `references/project-map.md`
@@ -157,16 +159,57 @@ Use source types consistently in project maps, specs, and reports:
 Do not promote `IMPLEMENTATION`, `INFERRED`, or `LEGACY` to `SOURCE` without a
 clear user decision or accepted project document.
 
+## Change Classification
+
+Before selecting a mode or touching a branch, classify the incoming work. The
+**one branch per feature** rule (one active feature, one feature branch, one
+spec/plan/tasks set) governs *new features only*. Most real project work —
+bug fixes, refactors, performance or reliability improvements, dependency
+upgrades, cross-cutting cleanups — is not a new feature, and forcing it into a
+new feature branch produces orphan specs and false roadmap entries.
+
+When work arrives, decide which of these it is:
+
+1. **New feature** — adds a product capability, workflow, or accepted behavior
+   that is not yet specified. Apply the one-branch-per-feature rule: create or
+   select a feature ID, work on its dedicated branch, and run it through the
+   feature lifecycle (Mode 4). This is the only case where a new feature branch
+   and a new feature entry are created by default.
+
+2. **Cross-cutting change** — a bug fix, refactor, or improvement that touches
+   one or more *existing* features without introducing a new product capability.
+   Do **not** auto-create a new feature or feature branch. Instead the agent
+   decides between two sub-cases, asking the user when the call is unclear or
+   changes product semantics:
+
+   - **Retrofit existing features** (default for most fixes/refactors): treat
+     the change as maintenance of features that already exist. Run it as the
+     Maintenance mode (Mode 8) — identify every feature it touches, reconcile
+     each through Drift Resolution (a pure bug fix usually realigns code to the
+     existing spec rather than changing it), and use the repo's normal change
+     branch with no new feature entry. Record the touched feature IDs and any
+     residual risk in the project map.
+   - **Promote to a new feature**: only when the change is coherent and
+     substantial enough to stand as its own product capability or proof unit
+     (for example, a reliability or migration effort the project wants to track,
+     specify, and verify on its own). Then it follows the new-feature path
+     above, with explicit dependencies on the features it derives from.
+
+A single cross-cutting change may touch several features at once — scope it,
+list the affected feature IDs, and reconcile their specs and evidence together.
+That does not violate the one-active-feature rule, which constrains how new
+features are built, not how existing ones are maintained.
+
 ## Operating Modes
 
-### 1. Project Initialization
+### 1. Project Initialization (`init`)
 
 Use after `specify init` when starting a new product or adding project-level
-Speckit discipline to a repo. This mode creates or refines artifacts such as the
+Spec Kit discipline to a repo. This mode creates or refines artifacts such as the
 PRD, feature breakdown, and project map; it does not replace the Spec Kit
 `specify init` command.
 
-1. Read `README*`, existing docs, package metadata, current Speckit files, and
+1. Read `README*`, existing docs, package metadata, current Spec Kit files, and
    any user-provided product notes.
 2. Create or refine `docs/prd.md`.
 3. Create `docs/feature-breakdown.md` with numbered features, dependencies,
@@ -184,7 +227,7 @@ PRD, feature breakdown, and project map; it does not replace the Spec Kit
 7. If the constitution is missing or weak on these points, run
    `speckit-constitution` before feature execution.
 
-### 2. Roadmap And Feature Breakdown
+### 2. Roadmap And Feature Breakdown (`breakdown`)
 
 Use when converting a PRD into executable feature slices.
 
@@ -197,7 +240,7 @@ Use when converting a PRD into executable feature slices.
 5. Update the project map so the web UI can connect PRD, roadmap, specs, code,
    evidence, and status.
 
-### 3. Active Feature Selection
+### 3. Active Feature Selection (`select`)
 
 Use when switching from one feature to another or resuming work.
 
@@ -206,7 +249,7 @@ Use when switching from one feature to another or resuming work.
 3. Align the repo state:
    - current git branch
    - `.specify/feature.json`
-   - `AGENTS.md` Speckit pointer, if present
+   - `AGENTS.md` Spec Kit pointer, if present
    - `project-map.yaml` or `.specify/project-map.yaml` `active_feature`
 4. If the feature does not exist, use the initialized Spec Kit feature creation
    flow as appropriate.
@@ -226,9 +269,12 @@ one of these next gates:
 - `select-next`: ask for or select the next feature only after the current
   feature has an explicit durable status in the project map.
 
-### 4. Feature Lifecycle Driver
+### 4. Feature Lifecycle Driver (`lifecycle`)
 
-Use one active feature at a time.
+Use one active feature at a time. This mode and its one-active-feature rule
+apply to **new features** (see Change Classification). For bug fixes and
+cross-cutting refactors that maintain existing features, use Maintenance
+(Mode 8) instead of opening a new feature branch.
 
 Planning-heavy phase, usually with the user present:
 
@@ -257,7 +303,7 @@ The orchestrator should update the project map after major transitions:
 `planned`, `specified`, `designed`, `tasked`, `implementing`, `implemented`,
 `verified`, `reviewed`, `done`, `blocked`, or `deferred`.
 
-### 5. Batch Planning Mode
+### 5. Batch Planning Mode (`batch`)
 
 Use when the user is available for product judgment and wants to prepare many
 features.
@@ -268,7 +314,7 @@ features.
 4. Do not implement multiple features at once.
 5. Leave each feature with a clear next execution step.
 
-### 6. Autonomous Execution Mode
+### 6. Autonomous Execution Mode (`autonomous`)
 
 Use only for features whose spec, plan, tasks, and analyze fixes are complete.
 
@@ -279,9 +325,9 @@ Use only for features whose spec, plan, tasks, and analyze fixes are complete.
    feature depends on unimplemented work.
 5. Commit after each feature when requested by the user or repo workflow.
 
-### 7. Brownfield Reconstruction
+### 7. Brownfield Reconstruction (`brownfield`)
 
-Use when a repo did not previously use Speckit. Runs **read-only without Spec Kit
+Use when a repo did not previously use Spec Kit. Runs **read-only without Spec Kit
 installed** — use it as the brownfield front door before any scaffolding.
 
 Posture: **user-driven + agent-ingest.** The user supplies intent pointers (PRD
@@ -301,8 +347,27 @@ reconstruct a whole repo without the user steering scope and priority.
 6. Ask the user to ratify or correct feature boundaries before treating them as
    product truth.
 7. Only after ratification and an explicit decision to adopt Spec Kit:
-   install / `specify init`, then generate or backfill Speckit specs for ratified
+   install / `specify init`, then generate or backfill Spec Kit specs for ratified
    features.
+
+### 8. Cross-Cutting Change / Maintenance (`maintenance`)
+
+Use for the **retrofit** path from Change Classification: a bug fix, refactor,
+or improvement that maintains one or more existing features without adding a new
+product capability. This mode does not create a feature entry or feature branch;
+it works on the repo's normal change branch.
+
+1. Identify every existing feature the change touches and list their IDs.
+2. For each touched feature, reconcile spec/plan/tasks/code/tests/evidence
+   through Drift Resolution. A pure bug fix usually realigns code to the existing
+   spec; only update a spec when accepted behavior actually changes.
+3. Run the relevant evidence and review steps (`quality-evidence`, `verify`,
+   `code-review-run`) for the affected scope.
+4. Update each touched feature's project-map entry and residual risks; do not
+   leave cross-feature drift unresolved.
+
+If the change turns out to be coherent and substantial enough to be its own
+product capability, stop and promote it to a new feature (Mode 1–4) instead.
 
 ## Project Map Maintenance
 
@@ -319,7 +384,7 @@ Keep the map useful as both a product summary and traceability index:
   unless the project explicitly says so.
 - Use stable IDs. Do not renumber existing features without explicit approval.
 - Prefer concise source refs over dumping full requirements into the map.
-- Keep `active_feature` aligned with branch and Speckit pointers.
+- Keep `active_feature` aligned with branch and Spec Kit pointers.
 - Mark inferred and legacy facts honestly.
 - Surface orphan code, specs without implementation, implementation not in spec,
   evidence gaps, stale reports, and cross-feature drift.
@@ -395,7 +460,8 @@ Do not report a feature as done unless:
 
 When working with the user, keep project-level status explicit:
 
-- current mode
+- current mode (`status`, `init`, `breakdown`, `select`, `lifecycle`, `batch`,
+  `autonomous`, `brownfield`, or `maintenance`)
 - active feature
 - branch
 - phase

@@ -16,7 +16,7 @@ and discovery fields.
 
 Preferred locations:
 
-- `.specify/project-map.yaml` for Speckit-native projects.
+- `.specify/project-map.yaml` for Spec Kit-native projects.
 - `project-map.yaml` when the repo or web UI expects a top-level visible file.
 
 If both exist, ask which is canonical or keep the `.specify` file canonical and
@@ -46,14 +46,15 @@ behavior from the active spec and optionally mark it `deprecated` or
 `active_feature` is current working state, not roadmap truth. It answers:
 
 ```text
-Which feature should project-level and Speckit commands operate on now?
+Which feature should project-level and Spec Kit commands operate on now?
 ```
 
-Keep it aligned with:
+It carries `id`, `branch`, `spec_path`, `phase`, and `updated_at`. Keep these
+aligned with:
 
 - current git branch
 - `.specify/feature.json`
-- `AGENTS.md` Speckit pointer
+- `AGENTS.md` Spec Kit pointer
 - selected feature entry in the map
 
 Durable status belongs on `features[*].status`; `active_feature.phase` can
