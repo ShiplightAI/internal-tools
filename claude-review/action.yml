@@ -1,0 +1,63 @@
+name: "Shiplight Claude Code Review"
+description: >
+  Formal, severity-based PR review via anthropics/claude-code-action: approves
+  when there are no CRITICAL/HIGH findings, requests changes for CRITICAL/HIGH,
+  comments when unsure. Wraps the canonical internal review so consumer repos
+  only keep a ~15-line trigger workflow. The trigger + permissions still live in
+  the caller workflow (GitHub requirement + claude-code-action's tamper guard);
+  the prompt, approval logic, and pinned action refs live here.
+
+inputs:
+  claude_code_oauth_token:
+    description: "OAuth token for the Claude GitHub App."
+    required: true
+  review-focus:
+    description: >
+      Optional repo-specific review guidance appended to the standard prompt
+      (e.g. a security emphasis for high-trust CI tooling). Trusted config set by
+      the repo's own workflow — not PR-author input.
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      with:
+        fetch-depth: 1
+
+    - name: Run Claude Code Review
+      uses: anthropics/claude-code-action@51705da45eecce209d4700538bf8377d5b5fc695 # v1
+      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        # The review (including approvals) is submitted by the Claude GitHub App
+        # token the action mints via OIDC — a distinct identity from the PR author,
+        # so it can approve without the self-approval restriction.
+        prompt: |
+          REPO: ${{ github.repository }}
+          PR NUMBER: ${{ github.event.pull_request.number }}
+
+          Please review this pull request and provide feedback on:
+          - Code quality and best practices
+          - Potential bugs or issues
+          - Security concerns (secret handling, injection, least privilege)
+          - Performance considerations
+          - Test coverage
+
+          ${{ inputs.review-focus }}
+
+          Use the repository's CLAUDE.md for guidance on style and conventions.
+          Be constructive and specific; cite file and line.
+
+          Classify every issue you find by severity: CRITICAL, HIGH, MEDIUM, or LOW.
+
+          Then submit your review with your Bash tool, choosing the event by severity:
+          - If there are NO CRITICAL and NO HIGH issues, approve:
+              gh pr review ${{ github.event.pull_request.number }} --approve --body "<summary>"
+          - If there is any CRITICAL or HIGH issue, request changes:
+              gh pr review ${{ github.event.pull_request.number }} --request-changes --body "<summary>"
+          - If you cannot confidently classify the severity, comment:
+              gh pr review ${{ github.event.pull_request.number }} --comment --body "<summary>"
+
+          Always include the full severity-labelled findings in the review body.
+        claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
