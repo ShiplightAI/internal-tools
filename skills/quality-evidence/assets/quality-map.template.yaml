@@ -4,7 +4,7 @@
 # not "is each check proven?". spec/user_authored = trusted (1.0),
 # agent_generated = medium (0.7), inferred_brownfield = low (0.4),
 # unspecified = excluded from the score (the back-compatible default).
-structure_provenance: "spec" # spec | user_authored | agent_generated | inferred_brownfield | unspecified
+structure_provenance: "unspecified" # spec | user_authored | agent_generated | inferred_brownfield | unspecified — set honestly; left as the score-excluded default so a copied template never over-claims trust
 target:
   id: "001-example-feature"
   name: "<Display target name>"
