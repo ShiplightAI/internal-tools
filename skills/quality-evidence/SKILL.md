@@ -687,115 +687,28 @@ When an agent test produces a report, record it here:
 
 ## Artifact Skeletons
 
-Use these sections unless the repo has a better local convention.
+Copy the bundled templates when creating new artifacts — they are the full,
+current starters (and the source of truth for shape, including fields like
+`structure_provenance` and `policy_override`). Validate the YAML against the
+bundled schemas. Use these unless the repo has a better local convention.
 
-`test-spec.md`:
+| Artifact | Template | Schema |
+| --- | --- | --- |
+| `quality-evidence/<target>/test-spec.md` | `assets/test-spec-template.md` | — |
+| `quality-evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `assets/quality-map.schema.json` |
+| repo-root `quality-policy.yaml` | `assets/quality-policy.template.yaml` | `assets/quality-policy.schema.json` |
+| `quality-evidence/<target>/test-report.md` | `assets/test-report-template.md` | — |
 
-```markdown
-# Test Spec: <Target>
+Section orientation (the templates hold the full form):
 
-**Scope**: <feature|module|PR|ticket>
-**Source material**: <paths, prompt, issue, PRD, inferred>
-**Quality policy**: [../../quality-policy.yaml](../../quality-policy.yaml)
-**Test report**: [test-report.md](./test-report.md)
-
-## Testing What
-## Evidence Strategy
-## Test Cases
-## Fixtures And Environments
-## Report Expectations
-## Coverage Notes
-```
-
-For the full starter, copy `assets/test-spec-template.md`.
-
-`quality-map.yaml`:
-
-```yaml
-target:
-  id: 001-example-feature # numbered feature slug
-  name: <target name>
-  scope: feature
-  aliases: []
-  source_refs: []
-expectations:
-  - id: <stable-expectation-id>
-    title: <behavior or invariant>
-    source_type: SOURCE
-    category: other
-    priority: P1
-    risk:
-      weight: 3
-      rationale: <why failure matters>
-    policy_override:
-      preferred_modalities: []
-      discouraged_modalities: []
-      required_modalities: []
-      required_contexts: []
-      minimum_depth: DIRECT
-      require_direct_evidence: false
-      require_multi_layer: false
-      require_gate: false
-      notes: <optional override>
-    evidence: []
-    proof_gap:
-      summary: <what proof is still missing or weak>
-      next_step: <highest-value follow-up proof>
-```
-
-For the full starter, copy `assets/quality-map.template.yaml`. For validation,
-use `assets/quality-map.schema.json`.
-
-`quality-policy.yaml`:
-
-```yaml
-name: <project proof policy>
-summary: <how this project wants proof budget spent>
-defaults:
-  preferred_modalities: [unit, contract, integration]
-  minimum_depth: INDIRECT
-  require_direct_evidence: false
-rules:
-  - id: release-critical-floor
-    when:
-      min_risk_weight: 5
-    minimum_depth: DIRECT
-    require_direct_evidence: true
-    require_gate: true
-    require_multi_layer: true
-```
-
-For the full starter, copy `assets/quality-policy.template.yaml`. For
-validation, use `assets/quality-policy.schema.json`.
+- `test-spec.md`: Testing What · Evidence Strategy · Test Cases · Fixtures And
+  Environments · Report Expectations · Coverage Notes.
+- `test-report.md`: Summary · Source Material · Commands Run · Tests Added Or
+  Updated · Coverage Matrix · Agent Test Evidence · Manual Verification Log ·
+  Findings · Deferred / Residual Risk · Cleanup · Coverage Summary.
 
 For `.quality-center/*` skeletons (observation sources, evaluation sets, saved
 views), see the `quality-center` skill.
-
-`test-report.md`:
-
-```markdown
-# Test Report: <Target>
-
-**Test spec**: [test-spec.md](./test-spec.md)
-**Quality map**: [quality-map.yaml](./quality-map.yaml)
-**Branch / commit**: <branch and commit if available>
-**Last updated**: <YYYY-MM-DD>
-**Tester**: <agent or person>
-
-## Summary
-## Source Material
-## Commands Run
-## Tests Added Or Updated
-## Coverage Matrix
-## Agent Test Evidence
-## Manual Verification Log
-## Findings
-## Deferred / Residual Risk
-## Cleanup
-## Coverage Summary
-```
-
-For the full starter, copy `assets/test-report-template.md`.
 
 ## Operating Rules
 
