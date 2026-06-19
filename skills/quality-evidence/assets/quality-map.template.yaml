@@ -1,3 +1,10 @@
+# How this map's STRUCTURE (its set of quality checks) was produced. Drives the
+# structure-confidence score, which is reported separately from evidence
+# confidence. Set it honestly — it answers "can this check list be trusted?",
+# not "is each check proven?". spec/user_authored = trusted (1.0),
+# agent_generated = medium (0.7), inferred_brownfield = low (0.4),
+# unspecified = excluded from the score (the back-compatible default).
+structure_provenance: "spec" # spec | user_authored | agent_generated | inferred_brownfield | unspecified
 target:
   id: "001-example-feature"
   name: "<Display target name>"
@@ -12,6 +19,9 @@ expectations:
     title: "<Behavior, invariant, workflow, or operational promise>"
     description: "<Short product-language quality check>"
     source_type: "SOURCE" # SOURCE | IMPLEMENTATION | INFERRED
+    # Optional: override the map-level structure_provenance for THIS check only,
+    # e.g. one hand-verified check in an otherwise inferred_brownfield map.
+    # structure_provenance: "user_authored"
     source_refs:
       - path: "<path/to/source.md>"
         anchor: "<optional-anchor-or-line-ref>"

@@ -223,6 +223,40 @@ observation and evaluation systems can join on them. Keep the map structural:
 proof definitions, proof posture, and proof gaps belong here; time-sensitive run
 outcomes and derived judgments do not.
 
+## Structure Provenance And Structure Confidence
+
+Declare `structure_provenance` at the top of `quality-map.yaml` (and optionally
+per check) so Quality Center can report **structure confidence** — how much the
+map's *structure* can be trusted — as a separate axis from evidence confidence.
+Evidence confidence asks "is each check proven?"; structure confidence asks "is
+this the right set of checks, and where did it come from?". A map reconstructed
+from existing code can show strong evidence on a check list that misses real
+requirements; this field surfaces that. The two are reported side by side and
+never blended.
+
+Choose the value honestly from how the check list was actually produced:
+
+- `spec` — derived from a written spec/PRD/Speckit artifact.
+- `user_authored` — a human defined the checks directly.
+- `agent_generated` — an agent produced the checks and a human reviewed them.
+- `inferred_brownfield` — reconstructed from existing code/tests after the fact,
+  not yet validated against intended requirements.
+- `unspecified` — origin unknown; the back-compatible default, excluded from the
+  score rather than penalized.
+
+Rules:
+
+- Set the map-level value on every map you author or repair. The whole map
+  inherits it; add a per-check `structure_provenance` only for genuine
+  exceptions (e.g. one hand-verified check inside an otherwise
+  `inferred_brownfield` map).
+- Prefer an honest `unspecified` over a guessed origin. Because `unspecified` is
+  excluded from the score, it tells the truth ("not declared"); a wrong `spec`
+  lies that the structure is trustworthy.
+- Never infer provenance from heuristics (git dates, whether a spec file exists)
+  and record it as if declared. Determine it from how the checks were genuinely
+  created, or leave it `unspecified` and flag it for a human.
+
 ## Runtime Join Contract
 
 This contract is the canonical interface between feature quality maps and
