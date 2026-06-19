@@ -1,6 +1,6 @@
 ---
 name: quality-center
-description: Improve overall project quality across many features using existing quality maps and Quality Center artifacts. Wire and repair runtime review config (observation sources, evaluation sets), author saved reader views, run @shiplightai/quality-tools analysis, and drive recommendation-based fixes across tests, workflows, config, and feature quality maps. Repo-scoped sibling of the feature-scoped quality-evidence skill.
+description: Improve overall project quality across many features using existing quality maps and Quality Center artifacts. Wire and repair runtime review config (observation sources, evaluation sets), author saved reader views, run @shiplightai/quality-tools analyze, read the quality score with its coverage, evidence-confidence, and structure-confidence breakdowns, and drive recommendation-based fixes across tests, workflows, config, and feature quality maps. Repo-scoped sibling of the feature-scoped quality-evidence skill.
 user_invocable: true
 ---
 

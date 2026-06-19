@@ -12,7 +12,7 @@ This is for **standalone** reviews — reviewing local changes, a feature area, 
 
 ## Required Claude Code version
 
-Before running a local or headless review, check `claude --version`. It must be Claude Code `2.1.150` or newer. If Claude Code is missing, older than `2.1.150`, or the version output is not Claude Code, stop and ask the user to update Claude Code.
+Before running a local or headless review, check `claude --version`. It must be Claude Code `2.1.150` or newer — the minimum that ships the effort-based `/code-review` skill (with `--effort`) this wraps. If Claude Code is missing, older than `2.1.150`, or the version output is not Claude Code, stop and ask the user to update Claude Code.
 
 ## The underlying review skill
 
