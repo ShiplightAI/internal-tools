@@ -240,6 +240,22 @@ features are built, not how existing ones are maintained.
 
 ## Operating Modes
 
+The modes fall into three families along the backbone/construction lens, plus the
+read-only status pass (see Default Invocation). Pick the family first, then the
+mode:
+
+- **Construct the backbone** — build or reconstruct project-map and quality-maps
+  from their sources: Project Initialization (1), Roadmap And Feature Breakdown
+  (2), Brownfield Reconstruction (7).
+- **Drive a feature** — operate on one active feature through planning and
+  execution: Active Feature Selection (3), Feature Lifecycle Driver (4), Batch
+  Planning (5), Autonomous Execution (6).
+- **Maintain** — change existing features without adding a new one:
+  Cross-Cutting Change / Maintenance (8).
+
+The mode numbers below are stable labels, not an execution order; cross-references
+elsewhere in this skill use them.
+
 ### 1. Project Initialization (`init`)
 
 Use after `specify init` when starting a new product or adding project-level
