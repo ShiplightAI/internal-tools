@@ -1,0 +1,69 @@
+name: Claude Code Review
+
+# Canonical internal PR-review workflow. COPY this file into a repo's
+# .github/workflows/claude-code-review.yml — it cannot be applied org-wide via
+# "required workflows" because claude-code-action's anti-tampering guard requires
+# the workflow to live on the target repo's own default branch.
+#
+# Pairs with the `auto-pr` skill (which waits for this bot review before merging).
+# Prerequisites in the target repo:
+#   - secret CLAUDE_CODE_OAUTH_TOKEN (org-level is fine)
+#   - the Claude GitHub App installed (for the OIDC -> App-token approval)
+#   - a branch ruleset requiring 1 approving review (so the bot's approval gates merge)
+#
+# Editing this file in a PR makes the guard SKIP that one review (self-tamper
+# protection) — so the PR that introduces/changes it is a one-time manual merge.
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # submit the review (approve / request-changes / comment)
+      issues: read
+      id-token: write # required: claude-code-action mints its App token via OIDC
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@51705da45eecce209d4700538bf8377d5b5fc695 # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The review (including approvals) is submitted by the Claude GitHub App
+          # token the action mints via OIDC — a distinct identity from the PR author,
+          # so it can approve without the self-approval restriction.
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Security concerns (secret handling, injection, least privilege)
+            - Performance considerations
+            - Test coverage
+
+            Use the repository's CLAUDE.md for guidance on style and conventions.
+            Be constructive and specific; cite file and line.
+
+            Classify every issue you find by severity: CRITICAL, HIGH, MEDIUM, or LOW.
+
+            Then submit your review with your Bash tool, choosing the event by severity:
+            - If there are NO CRITICAL and NO HIGH issues, approve:
+                gh pr review ${{ github.event.pull_request.number }} --approve --body "<summary>"
+            - If there is any CRITICAL or HIGH issue, request changes:
+                gh pr review ${{ github.event.pull_request.number }} --request-changes --body "<summary>"
+            - If you cannot confidently classify the severity, comment:
+                gh pr review ${{ github.event.pull_request.number }} --comment --body "<summary>"
+
+            Always include the full severity-labelled findings in the review body.
+
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
