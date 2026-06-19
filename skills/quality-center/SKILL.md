@@ -57,8 +57,9 @@ them to quality-map evidence by canonical proof-source path plus optional
 `test_case`, under the Runtime Join Contract defined in the `quality-evidence`
 skill. Joined observations make the affected expectation observed as
 pass/fail/error/skipped; no matching observation leaves it `unobserved`. The
-quality score is a derived review signal. Do not edit maps, scopes, or views to
-optimize the score.
+observation-backed quality score is one of four scores Quality Center reports
+(see Quality Scores); do not edit maps, scopes, views, or `structure_provenance`
+to optimize any of them.
 
 Responsibility boundaries, in one line each:
 
@@ -67,6 +68,51 @@ Responsibility boundaries, in one line each:
 - `evaluation-sets.yaml` answers: which profiles are reviewed together.
 - `views.yaml` answers: which project-map features should be read together as
   saved reader slices.
+
+## Quality Scores
+
+Quality Center reports **one observation-backed quality score plus three
+structural scores**. They answer different questions and are shown side by side,
+**never blended** into one number.
+
+| Score | Kind | Answers | Raised by |
+| --- | --- | --- | --- |
+| Quality score | observation-backed (runtime) | Are the mapped proofs passing right now? | green runtime observations (run an evaluation set) |
+| Coverage | structural | Is proof *designed* for the checks? (breadth) | mapping evidence for more checks |
+| Evidence confidence | structural | Is that proof *trustworthy and strong*? (depth) | stronger, more direct, more reliable proof |
+| Structure confidence | structural | Are these the *right checks*, and where did they come from? | human ratification of the check list |
+
+What this skill must hold:
+
+- **The quality score requires runtime.** It stays unavailable until an
+  evaluation set runs and observations join to the maps. Coverage, evidence
+  confidence, and structure confidence are derived from the static maps alone.
+- **Read structure confidence beside the others, never as part of them.** A map
+  reconstructed from code can show high coverage, evidence confidence, and
+  quality score on a check list that misses real requirements; its low structure
+  confidence is the only signal that the proven checks may be the *wrong* checks.
+  Never report a strong quality/coverage/evidence picture as trustworthy while
+  structure confidence is low — surface both.
+- **Structure confidence reads `structure_provenance`** (`spec`/`user_authored`
+  = high, `agent_generated` = medium, `inferred_brownfield` = low, `unspecified`
+  = excluded, not penalized). That field is authored and owned by the
+  `quality-evidence` skill; this skill reports and triages it but never authors
+  or self-promotes it.
+
+Split improvement work by which score it raises:
+
+- **Structure-confidence work — human-gated.** The check list is
+  `inferred_brownfield`/`unspecified`, or misses real requirements. Raising it
+  means ratifying or correcting the checks and their provenance, which is a human
+  decision. Hand to the `quality-evidence` skill (per feature) or
+  `shiplight-project` (project construction); never self-promote provenance here.
+  No `quality-tools` command raises structure confidence.
+- **Coverage and evidence-confidence work — agent-automatable.** The checks are
+  right but proof is missing or weak. Use `fix-prompts` and author tests. This is
+  the closed loop.
+- **Quality-score work — runtime.** Proof exists but observations fail or stay
+  unobserved. Fix the producer, the wiring, or the product, then re-run
+  `analyze`.
 
 ## Scope Resolution
 
@@ -536,8 +582,11 @@ For validation, use `assets/views.schema.json`.
   `quality-map.yaml` files. Keep the proof-definition join in feature evidence
   via canonical repo-relative test file paths.
 - Never invent a new feature target or mint a new `NNN-` slug from this skill.
-- Do not optimize the quality score as an objective. Do not remove scope,
-  weaken checks, or trim view membership to make recommendations disappear.
+- Do not optimize any of the four scores as an objective. In particular, never
+  promote `structure_provenance` (e.g. to `spec`/`user_authored`) to lift
+  structure confidence without genuine human ratification, and do not remove
+  scope, weaken checks, or trim view membership to make recommendations
+  disappear.
 - Treat generated recommendation files as read-only tool output.
 - Avoid unrelated refactors and unrelated production-code changes.
 - Never include secrets, cookies, tokens, database URLs, raw fixture secrets,

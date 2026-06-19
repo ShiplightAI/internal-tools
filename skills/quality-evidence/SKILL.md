@@ -257,6 +257,19 @@ Rules:
   and record it as if declared. Determine it from how the checks were genuinely
   created, or leave it `unspecified` and flag it for a human.
 
+Raising structure confidence is a **ratification ladder**, not an agent edit:
+`inferred_brownfield` (reconstructed, not yet validated) → `agent_generated` (an
+agent produced the checks and a human reviewed them) → `user_authored` / `spec`
+(a human defined the checks, or they derive from an accepted spec/PRD). The agent
+may author a map at `inferred_brownfield` and *propose* checks, but it must not
+record `agent_generated` until a human has actually reviewed the list, nor
+`user_authored`/`spec` without genuine human authorship or an accepted spec.
+Surface the unratified checks — high-risk ones first — for that review.
+Promoting the value is the per-feature action that raises structure confidence,
+and it is always human-gated; no test you add and no `fix-prompts` run can raise
+it. Adding or strengthening proof raises coverage and evidence confidence, which
+are reported beside structure confidence and never substitute for it.
+
 ## Runtime Join Contract
 
 This contract is the canonical interface between feature quality maps and
@@ -414,44 +427,21 @@ Keep categories distinct in `quality-map.yaml` and the Markdown report:
 When a coding agent drives a browser, produce auditable evidence. Text-only
 claims are not enough for browser verification.
 
-## Coverage Depth
+## Coverage Depth And Status Vocabularies
 
-Each status vocabulary below belongs to one artifact; do not mix them across
-artifacts.
+Each status vocabulary belongs to **one** artifact; do not mix them across
+artifacts. The full enum tables live in `references/vocabularies.md` — read it
+when authoring evidence depths or writing the test report. In short:
 
-Use depth labels on `quality-map.yaml` evidence rows to explain confidence,
-not just whether a row exists:
-
-- `DIRECT`: evidence directly proves the behavior or invariant.
-- `INDIRECT`: evidence exercises the behavior through a broader workflow.
-- `STATIC`: typecheck, lint, schema, static analysis, or compile evidence only.
-- `MANUAL`: human or agent-observed evidence.
-- `IMPLICIT`: relied on by implementation structure but not directly tested.
-- `MISSING`: no meaningful evidence found.
-- `BLOCKED`: environment, access, dependency, fixture, or tool limitation.
-
-Use result statuses for command and test outcomes in `test-report.md`:
-`PASS`, `FAIL`, `PARTIAL`, `BLOCKED`, `SKIPPED`, `NOT RUN`, `DEFERRED`,
-`ABORTED`, or `UNKNOWN`.
-
-Use coverage statuses in the test report's coverage matrix: `COVERED`,
-`PARTIAL`, `IMPLICIT`, `NOT COVERED`, `NOT MEASURED`, `MANUAL`, `BLOCKED`, or
-`DEFERRED`.
-
-Runtime analysis output owns its own lowercase vocabularies: observed states
-(`pass`, `fail`, `error`, `skipped`, `unobserved`) and stage statuses
-(`valid`, `partial`, `invalid`). A stage status of `partial` is not the report
-status `PARTIAL`; do not copy runtime vocabularies into authored artifacts.
-
-Use overall confidence in the test report summary:
-
-- `HIGH`: critical testing whats have direct or strong indirect evidence and
-  relevant checks passed.
-- `MEDIUM`: main behavior is evidenced, but important edges, integrations, or
-  operational risks remain weak.
-- `LOW`: evidence is mostly inferred, manual, blocked, missing, stale, or
-  failing.
-- `UNKNOWN`: the target could not be evaluated enough to judge.
+- **Evidence depth** (`quality-map.yaml` rows): `DIRECT`, `INDIRECT`, `STATIC`,
+  `MANUAL`, `IMPLICIT`, `MISSING`, `BLOCKED` — explains confidence, not just
+  existence. Use `MISSING`/`BLOCKED` only for the proof *definition*, never a
+  runtime result.
+- **Result status** (`test-report.md` outcomes) and **coverage status**
+  (`test-report.md` matrix): authored run/coverage results.
+- **Overall confidence** (`test-report.md` summary): `HIGH`/`MEDIUM`/`LOW`/`UNKNOWN`.
+- **Runtime analysis** owns its own lowercase observed states and stage statuses;
+  these are tool output, never hand-authored into artifacts.
 
 ## Testing Strategy And Budget Policy
 

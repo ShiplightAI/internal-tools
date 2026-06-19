@@ -38,15 +38,23 @@ foundations:
      `create-tests`) — plus public Shiplight skills such as `verify`.
    - Reference: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
 
-These prerequisites gate **mutating** project work — creating Spec Kit artifacts,
-backfilling specs, or driving the feature lifecycle. They are **not** required
-for a read-only brownfield assessment: discovering docs/code/tests/trackers,
-proposing a provisional project map, and running a `quality-evidence` confidence
-pass all work without `specify init`. For an un-initialized brownfield repo, start
-with that assessment (see Brownfield Reconstruction) and install/scaffold Spec Kit
-only after the user decides to adopt it. If a mutating step is requested while a
-prerequisite is missing, stop and help the user install or run the missing setup
-first.
+These prerequisites gate **Spec-Kit-specific** work — creating Spec Kit
+artifacts, backfilling specs, or running the `speckit-*` commands. They do
+**not** gate all project work. Two paths run without `specify init`:
+
+- **Read-only brownfield assessment**: discovering docs/code/tests/trackers,
+  proposing a provisional project map, and running a `quality-evidence`
+  confidence pass.
+- **Spec-less development and maintenance**: constructing and ratifying the
+  backbone (project map + feature quality maps) directly and driving the feature
+  lifecycle through its spec-less planning path (see Mode 4), including bug fixes
+  and cross-cutting changes. This is a first-class path, not a fallback — most
+  existing repos never adopt Spec Kit.
+
+For an un-initialized brownfield repo, start with the assessment (see Brownfield
+Reconstruction) and install/scaffold Spec Kit only if the user decides to adopt
+it. If a **Spec-Kit-specific** step is requested while Spec Kit is missing, stop
+and either help the user install it or offer the spec-less path instead.
 
 ## Default Invocation
 
@@ -72,11 +80,15 @@ Maintain this hierarchy:
 PRD / roadmap: project intent
 project-map.yaml: project graph and traceability
 quality-policy.yaml: project proof-strategy guidance
-spec.md: feature truth
-plan.md / tasks.md: execution contract
+spec.md: feature truth (spec-driven) — or ratified quality-map SOURCE checks (spec-less)
+plan.md / tasks.md: execution contract (spec-driven)
 code: implementation artifact
 tests / reports / reviews: evidence
 ```
+
+When a project is spec-less, the spec/plan/tasks rows are absent; the feature's
+ratified backbone (project-map entry plus quality-map `SOURCE` checks) carries
+the feature-truth role instead.
 
 For brownfield projects, existing code, docs, and tests are discovery inputs,
 not automatically product truth. Mark reconstructed facts as `IMPLEMENTATION`,
@@ -87,6 +99,32 @@ Definitions:
 - **Greenfield**: product intent starts from PRD/specs before implementation.
 - **Brownfield**: existing docs, code, tests, and runtime behavior are used to
   reconstruct candidate product intent and specs.
+
+## Backbone And Construction
+
+The project-map and the per-feature quality-maps are the stable **backbone** —
+fixed-shape data structures that downstream tools (Quality Center scores, runtime
+join, dashboards) read regardless of where their content came from. How the
+backbone gets populated is **construction**, and it varies by source:
+
+- **Spec-driven construction**: features and checks come from PRDs/specs and the
+  Spec Kit lifecycle. Quality maps are authored with `structure_provenance: spec`
+  (or `user_authored` when a human defines the checks directly).
+- **Brownfield construction**: features and checks are reconstructed from existing
+  code, docs, tests, and trackers. Quality maps are authored
+  `structure_provenance: inferred_brownfield` until a human validates them, and
+  project-map facts are marked `IMPLEMENTATION`/`INFERRED`/`LEGACY` as above.
+
+Construction is continuous reconciliation, not a one-time bootstrap: the same step
+keeps the backbone aligned as code, specs, tickets, and evidence change. A single
+project may mix constructors — some features spec-driven, some reconstructed —
+because provenance is recorded per artifact, not per project. Spec Kit is one
+optional constructor, not a prerequisite for the backbone.
+
+`structure_provenance` is the join key for Quality Center's **structure
+confidence** score, exactly as `evidence.path` is the join key for runtime review.
+It is owned and authored by the `quality-evidence` skill; this orchestrator drives
+*when* construction and ratification happen, not the field's contract.
 
 ## Specification Authority
 
@@ -251,8 +289,9 @@ Use when switching from one feature to another or resuming work.
    - `.specify/feature.json`
    - `AGENTS.md` Spec Kit pointer, if present
    - `project-map.yaml` or `.specify/project-map.yaml` `active_feature`
-4. If the feature does not exist, use the initialized Spec Kit feature creation
-   flow as appropriate.
+4. If the feature does not exist, create it: use the Spec Kit feature creation
+   flow when Spec Kit is adopted, or create the backbone entry directly
+   (project-map feature plus a `quality-evidence` target) when spec-less.
 5. Report the active feature, branch, phase, and next expected command.
 
 `active_feature` is a working pointer. Durable roadmap status belongs on the
@@ -276,7 +315,11 @@ apply to **new features** (see Change Classification). For bug fixes and
 cross-cutting refactors that maintain existing features, use Maintenance
 (Mode 8) instead of opening a new feature branch.
 
-Planning-heavy phase, usually with the user present:
+The planning phase establishes the feature's intent contract. Use whichever
+constructor the project has adopted — both are first-class and converge on the
+same execution phase.
+
+**Spec-driven planning** (Spec Kit adopted), usually with the user present:
 
 ```text
 speckit-specify
@@ -288,10 +331,19 @@ speckit-specify
 -> commit docs/artifacts when requested
 ```
 
-Execution-heavy phase, often automatable after planning is accepted:
+**Spec-less planning** (no Spec Kit) — the default for repos that develop or fix
+without spec-driven development: author and ratify the backbone directly as the
+intent contract — the project-map feature entry plus the feature's
+`quality-evidence` test-spec and quality-map. The ratified quality-map `SOURCE`
+checks (`structure_provenance: user_authored`) stand in for the spec as accepted
+behavior. The owner ratifies them, exactly as Spec Kit planning is owner-present;
+this is what raises structure confidence (see Quality And Release Gates).
+
+Execution-heavy phase, shared by both planning modes and often automatable after
+planning is accepted:
 
 ```text
-speckit-implement
+speckit-implement (or implement directly, spec-less)
 -> verify UI/API behavior as needed
 -> create or update tests
 -> quality-evidence
@@ -316,7 +368,9 @@ features.
 
 ### 6. Autonomous Execution Mode (`autonomous`)
 
-Use only for features whose spec, plan, tasks, and analyze fixes are complete.
+Use only for features whose planning is complete and ratified: spec, plan,
+tasks, and analyze fixes (spec-driven), or the ratified backbone — project-map
+entry plus quality-map `SOURCE` checks (spec-less).
 
 1. Work feature-by-feature in dependency order.
 2. Switch active feature before implementation.
@@ -445,6 +499,30 @@ proof-strategy guidance to apply across many features.
 
 Do not produce a project-scope quality map. The project map links to each
 feature's quality map, and project-level quality is an aggregate of those maps.
+
+Quality Center reports four scores over that aggregate: one observation-backed
+**quality score** (proofs passing at runtime) and three structural scores —
+**coverage** (proof designed), **evidence confidence** (proof strong), and
+**structure confidence** (the check list is the right one, from
+`structure_provenance`). They are shown side by side and never blended; a strong
+quality/coverage/evidence picture on low structure confidence means the proven
+checks may be the *wrong* checks.
+
+These map to three improvement activities, with the gate on the first:
+
+- **Raise structure confidence — human-gated.** Construct and *ratify* the
+  backbone: propose features and checks, then have the owner validate them so
+  provenance climbs `inferred_brownfield` → `agent_generated` →
+  `user_authored`/`spec`. This is the only score no command can move; it is this
+  orchestrator's gate and the heaviest work in a brownfield project.
+- **Raise coverage and evidence confidence — agent-automatable.** For ratified
+  checks, design and strengthen proof through `quality-evidence` and `fix-prompts`.
+- **Raise the quality score — runtime.** Wire observations and make them pass
+  through the `quality-center` runtime-review flow (`analyze`).
+
+The end-goal automated loop runs the agent-automatable activities continuously and
+stops at the ratification gate for owner input. Never let an agent ratify the
+backbone on the owner's behalf to make the structure-confidence number rise.
 
 Use `verify` when UI or live behavior needs browser evidence. Use
 `code-review-run` after implementation stabilizes or before PR/release gates.
