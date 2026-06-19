@@ -52,9 +52,9 @@ runs:
           Classify every issue you find by severity: CRITICAL, HIGH, MEDIUM, or LOW.
 
           Then submit your review with your Bash tool, choosing the event by severity:
-          - If there are NO CRITICAL and NO HIGH issues, approve:
+          - If there are NO CRITICAL, NO HIGH and no MEDIUM issues, approve:
               gh pr review ${{ github.event.pull_request.number }} --approve --body "<summary>"
-          - If there is any CRITICAL or HIGH issue, request changes:
+          - If there is any CRITICAL, HIGH or MEDIUM issue, request changes:
               gh pr review ${{ github.event.pull_request.number }} --request-changes --body "<summary>"
           - If you cannot confidently classify the severity, comment:
               gh pr review ${{ github.event.pull_request.number }} --comment --body "<summary>"
