@@ -5,9 +5,11 @@ Private Shiplight agent assets for internal development workflows.
 This repository intentionally contains internal-only skills and prompts. Public
 Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 
-> **Design philosophy & global architecture:** see [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-> for how Spec Kit, `quality-project`, `quality-evidence`, the test producers, and
-> Quality Center compose — and the principles behind the boundaries.
+> **The quality skill suite moved out.** `quality-project`, `quality-evidence`,
+> and `quality-center` — plus the `ARCHITECTURE.md` / `POSITION.md` design docs
+> and the prompt playbook — now live in the Quality Center product repo under
+> `quality-center-vesuvius/agent-skills/`. This repo keeps the
+> development-workflow skills below.
 
 ## Included Assets
 
@@ -15,19 +17,12 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
-| `quality-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, change classification (new feature vs cross-cutting refactor/bug fix), brownfield reconstruction, and feature lifecycle sequencing. |
-| `quality-evidence` | Assess and improve quality evidence for one feature or spec: map coverage depth, run verification, add worthwhile tests/checks, and write user-facing confidence reports. |
-| `quality-center` | Improve overall project quality across features: wire runtime review (observation sources, evaluation sets), author saved reader views, run `quality-tools analyze`, and triage generated recommendations. Repo-scoped sibling of `quality-evidence`. |
 | `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
 | `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
 
 Skills bundle their own starter assets and copy them into a target repo on
 demand, so there is nothing extra to install:
 
-- `quality-evidence/assets/`: quality-map and quality-policy templates and
-  schemas, plus test-spec/report templates.
-- `quality-center/assets/`: observation-sources, evaluation-sets, and views
-  templates and schemas for `.quality-center/` runtime-review config.
 - `create-agent-tests/assets/`: the `run-agent-verification.ts` runner, the
   agent-test case template, and an example suites manifest, with runner setup
   documented in `create-agent-tests/references/runner.md`. These are copied into
@@ -64,22 +59,12 @@ CLI can use when cloning `ShiplightAI/internal-agent-skills`.
 
 ```bash
 npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
-npx skills add ShiplightAI/internal-agent-skills --skill quality-project -a codex -y
-npx skills add ShiplightAI/internal-agent-skills --skill quality-evidence -a codex -y
-npx skills add ShiplightAI/internal-agent-skills --skill quality-center -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill create-agent-tests -a codex -y
 ```
 
-## Quality Project Prerequisites
+## Create Agent Tests Notes
 
-The `quality-project` skill assumes the target repo is already initialized with
-GitHub Spec Kit and that the active agent has Shiplight MCP plus Shiplight
-skills installed.
-
-- Spec Kit: https://github.com/github/spec-kit/blob/main/README.md
-- Shiplight agent skills and MCP: https://github.com/ShiplightAI/agent-skills/blob/main/README.md
-
-Note: the `create-agent-tests` starter assets (the `run-agent-verification.ts`
+The `create-agent-tests` starter assets (the `run-agent-verification.ts`
 runner, the agent-test case template, and the example suites manifest) ship
 inside that skill's bundle under `skills/create-agent-tests/assets/`. The skill
 copies them into a target repo's `tests/agent/` only when a project adopts agent
@@ -87,11 +72,6 @@ tests; there is no separate install step. Each target repo still owns its real
 `tests/agent/agent-test-suites.json`, case files, fixtures, auth/session
 bootstrap, CI wiring, engine secrets, MCP config, and environment mutation
 policies.
-
-`quality-evidence` replaces the earlier `test-quality` skill name. Existing
-projects that already use `test-quality/` evidence artifacts can keep that
-directory until they explicitly migrate; the skill preserves that convention when
-`test-quality/` already exists and `quality-evidence/` does not.
 
 ## Update
 
