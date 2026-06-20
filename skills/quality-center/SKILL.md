@@ -105,7 +105,7 @@ Split improvement work by which score it raises:
   `inferred_brownfield`/`unspecified`, or misses real requirements. Raising it
   means ratifying or correcting the checks and their provenance, which is a human
   decision. Hand to the `quality-evidence` skill (per feature) or
-  `shiplight-project` (project construction); never self-promote provenance here.
+  `quality-project` (project construction); never self-promote provenance here.
   No `quality-tools` command raises structure confidence.
 - **Coverage and evidence-confidence work — agent-automatable.** The checks are
   right but proof is missing or weak. Use `fix-prompts` and author tests. This is

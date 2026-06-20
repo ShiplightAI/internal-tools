@@ -60,7 +60,7 @@ Do not overload `target` to mean both.
 | Layer / actor | Repo | Role |
 | --- | --- | --- |
 | **Spec Kit** | `github/spec-kit` (upstream) | SDD engine. Turns intent into English artifacts such as `spec.md`, `plan.md`, and `tasks.md`. Gates the quality of those artifacts, not the built software. |
-| **shiplight-project** | `internal-agent-skills` | Project-level orchestrator. Maintains `project-map.yaml`, release areas, feature graph, active feature selection, change classification, and brownfield reconstruction. |
+| **quality-project** | `internal-agent-skills` | Project-level orchestrator. Maintains `project-map.yaml`, release areas, feature graph, active feature selection, change classification, and brownfield reconstruction. |
 | **quality-evidence** | `internal-agent-skills` | Per-feature proof-definition strategist. Defines what must be proven, reads proof-strategy guidance, maintains `quality-map.yaml` and `test-spec.md`, pushes producers to create evidence, and may export local observations when it runs checks. |
 | **quality-center (skill)** | `internal-agent-skills` | Repo-scoped quality-improvement workflow. Wires `.quality-center/` observation sources, evaluation sets, and saved views; runs `quality-tools analyze`; triages generated recommendations across feature maps and delegates deep per-feature rework to `quality-evidence`. Agent-side counterpart of the Quality Center engine below. |
 | **Producers** | mixed | Author and execute evidence: code-tied tests, `create-agent-tests`, `create-tests`, manual checks, telemetry queries, and similar mechanisms. |
@@ -100,7 +100,7 @@ judgment live.
 ## End-to-end flow
 
 ```text
-        ┌─────────────────────────── shiplight-project ───────────────────────────┐
+        ┌─────────────────────────── quality-project ───────────────────────────┐
         │                                                                          │
    PRD ─┤  Spec Kit: constitution → specify → plan → tasks → implement            │
         │              gates: checklist · analyze                                 │
@@ -283,7 +283,7 @@ Owns product intent artifacts:
 
 It does not prove the built software works.
 
-### shiplight-project
+### quality-project
 
 Owns the project graph and release graph:
 
@@ -451,8 +451,8 @@ boundaries between structural artifacts and temporal outputs.
 
 | Artifact | Written by | Consumed by | Role |
 | --- | --- | --- | --- |
-| `spec.md` | Spec Kit / shiplight-project | quality-evidence | feature truth |
-| `project-map.yaml` | shiplight-project | quality-evidence, Quality Center, dashboards | structural project and release graph |
+| `spec.md` | Spec Kit / quality-project | quality-evidence | feature truth |
+| `project-map.yaml` | quality-project | quality-evidence, Quality Center, dashboards | structural project and release graph |
 | `quality-map.yaml` | quality-evidence | Quality Center, fix-prompts, review | structural proof-definition graph |
 | `quality-policy.yaml` | maintainers / project owners / future tools | quality-evidence | structural proof-strategy guidance |
 | observation records | producers / exporters / CI / local runs | Quality Center, reports | temporal proof outcomes |

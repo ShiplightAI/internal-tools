@@ -6,7 +6,7 @@ This repository intentionally contains internal-only skills and prompts. Public
 Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 
 > **Design philosophy & global architecture:** see [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-> for how Spec Kit, `shiplight-project`, `quality-evidence`, the test producers, and
+> for how Spec Kit, `quality-project`, `quality-evidence`, the test producers, and
 > Quality Center compose — and the principles behind the boundaries.
 
 ## Included Assets
@@ -15,7 +15,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
-| `shiplight-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, change classification (new feature vs cross-cutting refactor/bug fix), brownfield reconstruction, and feature lifecycle sequencing. |
+| `quality-project` | Orchestrate project-level Spec Kit work: PRD, roadmap, project map, feature breakdown, active feature selection, change classification (new feature vs cross-cutting refactor/bug fix), brownfield reconstruction, and feature lifecycle sequencing. |
 | `quality-evidence` | Assess and improve quality evidence for one feature or spec: map coverage depth, run verification, add worthwhile tests/checks, and write user-facing confidence reports. |
 | `quality-center` | Improve overall project quality across features: wire runtime review (observation sources, evaluation sets), author saved reader views, run `quality-tools analyze`, and triage generated recommendations. Repo-scoped sibling of `quality-evidence`. |
 | `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
@@ -64,15 +64,15 @@ CLI can use when cloning `ShiplightAI/internal-agent-skills`.
 
 ```bash
 npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
-npx skills add ShiplightAI/internal-agent-skills --skill shiplight-project -a codex -y
+npx skills add ShiplightAI/internal-agent-skills --skill quality-project -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill quality-evidence -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill quality-center -a codex -y
 npx skills add ShiplightAI/internal-agent-skills --skill create-agent-tests -a codex -y
 ```
 
-## Shiplight Project Prerequisites
+## Quality Project Prerequisites
 
-The `shiplight-project` skill assumes the target repo is already initialized with
+The `quality-project` skill assumes the target repo is already initialized with
 GitHub Spec Kit and that the active agent has Shiplight MCP plus Shiplight
 skills installed.
 

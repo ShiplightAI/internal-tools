@@ -1,10 +1,10 @@
 ---
-name: shiplight-project
+name: quality-project
 description: "Orchestrate project-level Spec Kit development: PRDs, roadmap and feature breakdown, project-map traceability, active feature selection, change classification (new feature vs cross-cutting refactor/bug fix), brownfield reconstruction from existing docs/code/tests, and sequencing of Spec Kit, verify, quality-evidence, and code-review workflows."
 user_invocable: true
 ---
 
-# Shiplight Project
+# Quality Project
 
 Project-level operating workflow for Spec Kit projects. Use this when the user
 wants to create or refine a PRD, break a product into numbered features, select
