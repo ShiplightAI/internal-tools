@@ -17,16 +17,7 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
-| `create-agent-tests` | Author, scaffold, and run coding-agent-driven Markdown test cases against a live environment, with an auditable PASS/FAIL/BLOCKED report. Sibling to `create-tests` (YAML E2E). |
 | `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
-
-Skills bundle their own starter assets and copy them into a target repo on
-demand, so there is nothing extra to install:
-
-- `create-agent-tests/assets/`: the `run-agent-verification.ts` runner, the
-  agent-test case template, and an example suites manifest, with runner setup
-  documented in `create-agent-tests/references/runner.md`. These are copied into
-  `tests/agent/` when a project adopts agent tests.
 
 ## Install
 
@@ -59,19 +50,7 @@ CLI can use when cloning `ShiplightAI/internal-agent-skills`.
 
 ```bash
 npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
-npx skills add ShiplightAI/internal-agent-skills --skill create-agent-tests -a codex -y
 ```
-
-## Create Agent Tests Notes
-
-The `create-agent-tests` starter assets (the `run-agent-verification.ts`
-runner, the agent-test case template, and the example suites manifest) ship
-inside that skill's bundle under `skills/create-agent-tests/assets/`. The skill
-copies them into a target repo's `tests/agent/` only when a project adopts agent
-tests; there is no separate install step. Each target repo still owns its real
-`tests/agent/agent-test-suites.json`, case files, fixtures, auth/session
-bootstrap, CI wiring, engine secrets, MCP config, and environment mutation
-policies.
 
 ## Update
 
