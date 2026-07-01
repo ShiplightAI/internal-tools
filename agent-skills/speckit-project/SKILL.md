@@ -1,6 +1,6 @@
 ---
 name: speckit-project
-description: Drive spec-driven (or spec-less) project development. Create and refine the PRD and feature breakdown, classify incoming work (new feature vs cross-cutting change), select the active feature, and run the feature lifecycle — specify, clarify, plan, tasks, analyze, implement — sequencing test creation, verification, and code review. It produces docs/PRD.md, docs/feature-breakdown.md, and specs/<feature>/ artifacts, and hands test creation to test-coverage.
+description: Drive spec-driven (or spec-less) project development. Create and refine the PRD and feature breakdown, classify incoming work (new feature vs cross-cutting change), select the active feature, and run the feature lifecycle — specify, clarify, plan, tasks, analyze, implement — sequencing test creation, verification, and code review. It produces docs/PRD.md, docs/feature-breakdown.md, and specs/<feature>/ artifacts, and hands test creation to /shiplight cover.
 ---
 
 # Speckit Project
@@ -12,7 +12,7 @@ the development skills.
 
 It produces human-readable Markdown and Spec Kit artifacts and drives
 implementation. It sequences sibling skills rather than duplicating them:
-`verify` (browser/live behavior), `test-coverage` (test creation), and the test producers `create-yaml-tests` / `create-agent-tests`.
+`/shiplight verify` (browser/live behavior), `/shiplight cover` (test creation), and the test producers `/shiplight create-yaml-tests` / `/shiplight create-agent-verification`.
 
 ## What This Skill Owns
 
@@ -31,7 +31,7 @@ skills. Reference: https://github.com/github/spec-kit/blob/main/README.md
 
 These gate **Spec-Kit-specific** steps only. **Spec-less development** — building
 or fixing without Spec Kit, driving implementation directly and handing the
-result to `test-coverage` — is a first-class path that needs no `specify init`. Most existing repos never adopt Spec Kit. If a
+result to `/shiplight cover` — is a first-class path that needs no `specify init`. Most existing repos never adopt Spec Kit. If a
 Spec-Kit-specific step is requested while Spec Kit is missing, stop and either
 help install it or offer the spec-less path.
 
@@ -81,7 +81,7 @@ Prefer existing repo conventions. Otherwise: `docs/PRD.md`,
 `docs/feature-breakdown.md`, `specs/NNN-feature-name/`. Use the bundled
 `assets/prd-template.md` and `assets/feature-breakdown-template.md`. `specs/` is
 a plain directory convention — use it even when the project is not spec-driven,
-so `test-coverage` finds artifacts in one place.
+so `/shiplight cover` finds artifacts in one place.
 
 Write PRD, roadmap, and feature names/descriptions in product language —
 capabilities, workflows, outcomes — not implementation detail.
@@ -110,7 +110,7 @@ domains, integrations, and risk boundaries; split so each feature can be
 specified, implemented, and verified independently; assign stable three-digit IDs
 (`001-*`) and explicit dependencies; keep MVP/release areas visible. Carry each
 feature's declared **priority** (P0–P3) — it is the importance fact that
-`test-coverage` later reads to set testing effort.
+`/shiplight cover` later reads to set testing effort.
 
 ### 3. Active Feature Selection (`select`)
 
@@ -140,13 +140,13 @@ owner-present.
 
 ```text
 speckit-implement (or implement directly, spec-less)
--> verify UI/API behavior as needed (verify)
--> create or update tests (test-coverage)
--> optional review
+-> verify UI/API behavior as needed (`/shiplight verify`)
+-> create or update tests (`/shiplight cover`)
+-> optional review (`/shiplight review`)
 -> commit implementation when requested
 ```
 
-After execution, hand off to `test-coverage` for comprehensive tests and the
+After execution, hand off to `/shiplight cover` for comprehensive tests and the
 session record.
 
 ### 5. Batch Planning (`batch`)
@@ -159,7 +159,7 @@ implement multiple features at once; leave each with a clear next step.
 
 Only for features whose planning is complete and ratified. Work in dependency
 order, switch active feature before implementing, run implementation and hand to
-`test-coverage`. Stop if requirements are ambiguous, tests need product judgment,
+`/shiplight cover`. Stop if requirements are ambiguous, tests need product judgment,
 or a feature depends on unimplemented work.
 
 ### 7. Cross-Cutting Change / Maintenance (`maintenance`)
@@ -167,7 +167,7 @@ or a feature depends on unimplemented work.
 The retrofit path: a fix or refactor maintaining existing features on the repo's
 normal change branch, no new feature entry. Identify every feature the change
 touches; reconcile each through Drift Resolution (a pure bug fix usually realigns
-code to the existing spec); run `verify` and `test-coverage` for the
+code to the existing spec); run `/shiplight verify` and `/shiplight cover` for the
 affected scope. Promote to a new feature only if the change is substantial enough
 to stand alone.
 
@@ -188,7 +188,7 @@ Do not report a feature as complete while known spec/code/test drift remains.
 
 Do not report a feature as done unless: spec/tasks are reconciled, implementation
 is complete for the accepted scope, and relevant tests/checks have passed (via
-`test-coverage`) or residual risks are documented.
+`/shiplight cover`) or residual risks are documented.
 
 ## Mutation Boundaries
 
@@ -200,14 +200,14 @@ is complete for the accepted scope, and relevant tests/checks have passed (via
 - `lifecycle` / `maintenance`: update specs before code when accepted behavior
   changes, then plan/tasks/code/tests.
 - Branch, release, PR, and merge operations require an explicit user request.
-- Never edit `test-coverage`'s artifacts (`test-spec.md`, `test-report.md`,
+- Never edit `/shiplight cover`'s artifacts (`test-spec.md`, `test-report.md`,
   repo-root `TESTING.md`).
 
 ## When Not To Use
 
-- When the user wants tests created or coverage assessed: use `test-coverage`.
-- When the user wants only browser/live verification: use `verify`.
-- When the user wants only a code review: use `review`.
+- When the user wants tests created or coverage assessed: use `/shiplight cover`.
+- When the user wants only browser/live verification: use `/shiplight verify`.
+- When the user wants only a code review: use `/shiplight review`.
 
 ## Output Style
 

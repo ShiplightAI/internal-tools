@@ -1,0 +1,13 @@
+views:
+  - id: "example-slice"
+    name: "Example slice"
+    description: "Reusable reader slice for related project-map features."
+    feature_ids:
+      - "001-example-feature"
+      - "002-example-feature"
+
+# Authoring notes:
+# - One saved view per meaningful product, release, team, or workflow slice.
+# - Do not create a saved view for Whole project; the built-in scope exists automatically.
+# - feature_ids must match features[].id values from the primary project-map.yaml exactly.
+# - Keep this file as a reader filter only; do not duplicate quality checks, evidence, or observation-source config here.
