@@ -158,14 +158,21 @@ aggregate of those maps. Quality Center reports four scores over the aggregate
 (quality, coverage, evidence confidence, structure confidence), shown side by
 side and never blended — the `analyze` subcommand owns the full model.
 
-This skill owns the one score no command can move: **structure confidence**, the
-human-gated ratification of the check list and its priorities.
+This skill owns the feature-level ratification gates that feed **structure
+confidence** — feature `status` (gate 2) and `priority_provenance` (gate 3) — part
+of the human-gated axis no automated command can move. The per-map
+`structure_provenance` (gate 1) is owned by the `evidence` subcommand; the engine
+joins all three. See `_shared/independence.md` → "Structure confidence: the three
+ratification gates".
 
-- **Raise structure confidence — this skill's gate.** Construct and *ratify* the
-  backbone: propose features, checks, and priorities, then have the owner
-  validate them so provenance climbs `inferred_brownfield` → `agent_generated` →
-  `user_authored`/`spec`. The heaviest work in a brownfield project. Never let an
-  agent ratify on the owner's behalf to make the number rise.
+- **Raise structure confidence — this skill's gates.** Construct and *ratify* the
+  backbone: propose features, checks, and priorities, then have the owner validate
+  them. This skill's own gates are per-feature: ratify a `candidate` feature's
+  `status` and mark `priority_provenance: human` once a person sets the priority. It
+  also drives *when* per-feature `structure_provenance` climbs
+  `inferred_brownfield` → `agent_generated` → `user_authored`/`spec` (that field
+  itself is owned by the `evidence` subcommand). The heaviest work in a brownfield
+  project. Never let an agent ratify on the owner's behalf to make the number rise.
 - **The other three are delegated and agent-automatable**: coverage and evidence
   confidence through `/shiplight cover` (create tests) and the `evidence`
   subcommand (map them, `fix-prompts`); the runtime quality score through the

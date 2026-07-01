@@ -158,6 +158,12 @@ and no `fix-prompts` run can raise it. Mapping more proof and stronger types
 raises coverage and evidence confidence, reported beside structure confidence
 and never substituting for it.
 
+This map-level `structure_provenance` is **gate 1** of the three ratification
+gates that feed structure confidence; the feature-level gates — feature `status`
+and `priority_provenance` in `project-map.yaml` — are owned by the `project`
+subcommand, and the engine joins all three. See `_shared/independence.md` →
+"Structure confidence: the three ratification gates".
+
 ## Runtime Join Contract
 
 The canonical interface between feature quality maps and observations. The
@@ -258,7 +264,9 @@ cover`; for `.quality-center/config/*` see the `analyze` subcommand.
 
 ## Operating Rules
 
-- Constructs and edits `.quality-center/evidence/**` only. Does not create tests,
+- Constructs and edits `.quality-center/evidence/**` only (the `analyze`
+  subcommand may also apply contract-conformant join-key/`proof_gap` fixes there).
+  Does not create tests,
   author `test-spec.md`/`test-report.md` (dev-owned, in `specs/<feature>/`),
   author `.quality-center/project-map.yaml`, or touch the rest of
   `.quality-center/**` (config and generated output, owned by the `analyze`

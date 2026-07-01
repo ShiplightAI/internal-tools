@@ -1,6 +1,6 @@
 # analyze — Observations, scoring, and triage
 
-The `analyze` mode of the `/quality` router: the heaviest Quality Center
+The `analyze` subcommand of the `/quality` router: the heaviest Quality Center
 workflow, covering observation config, the four scores, recommendation analysis,
 and triage.
 
@@ -16,11 +16,11 @@ review, bundling observation sources into observation sets, creating saved reade
 views, running recommendation analysis, and working down the generated
 recommendations across multiple feature quality maps.
 
-This `analyze` mode never works on a single new feature target. Single-feature index
+This `analyze` subcommand never works on a single new feature target. Single-feature index
 construction — building `.quality-center/evidence/<target>/quality-map.yaml` — belongs to
 the `evidence` subcommand, and the dev artifacts it reads
 (`specs/<feature>/test-spec.md`, `test-report.md`) belong to `/shiplight cover`.
-This `analyze` mode consumes those feature maps as existing inputs and improves the
+This `analyze` subcommand consumes those feature maps as existing inputs and improves the
 evidence system around and across them.
 
 In this `analyze` subcommand, `.quality-center` is the checked-in quality artifact namespace
@@ -47,7 +47,7 @@ quality-tools analyze                                observation-backed recommen
 The layers are separate, and each answers exactly one question:
 
 - `quality-map.yaml` — feature-scoped, owned by the `evidence` subcommand (its
-  template/schema live in that mode's assets): what counts as proof for the
+  template/schema live in that subcommand's assets): what counts as proof for the
   feature.
 - `.quality-center/config/observation-sources.yaml` — repo-scoped: where runtime
   results come from.
@@ -79,7 +79,7 @@ structural scores**. They answer different questions and are shown side by side,
 | Evidence confidence | structural | Is that proof *trustworthy and strong*? | stronger test types (derived from evidence `type`), more proof mapped |
 | Structure confidence | structural | Are these the *right checks*, and where did they come from? | human ratification of the check list |
 
-What this `analyze` mode must hold:
+What this `analyze` subcommand must hold:
 
 - **The quality score requires runtime.** It stays unavailable until an
   observation set runs and observations join to the maps. Coverage, evidence
@@ -93,8 +93,11 @@ What this `analyze` mode must hold:
 - **Structure confidence reads `structure_provenance`** (`spec`/`user_authored`
   = high, `agent_generated` = medium, `inferred_brownfield` = low, `unspecified`
   = 0, counted — earns no trust). That field is authored and owned by the
-  `evidence` subcommand; this `analyze` mode reports and triages it but never authors
-  or self-promotes it.
+  `evidence` subcommand; this `analyze` subcommand reports and triages it but never authors
+  or self-promotes it. `structure_provenance` is only **gate 1** of structure
+  confidence; feature `status` and `priority_provenance` in `project-map.yaml`
+  (owned by `project`) are gates 2–3, and the engine joins all three. See
+  `_shared/independence.md` → "Structure confidence: the three ratification gates".
 
 Split improvement work by which score it raises:
 
@@ -121,11 +124,11 @@ Resolve the review scope before changing anything. Valid scopes:
 - an existing generated recommendations file the user points to
 
 Never invent a new feature target for project-level work, and never mint a new
-`NNN-` slug from this `analyze` mode. If the user's request turns out to be about one
+`NNN-` slug from this `analyze` subcommand. If the user's request turns out to be about one
 feature's evidence ("add tests for the rate-card feature"), hand off to the
 `evidence` subcommand instead.
 
-This `analyze` mode does not produce a project-scope quality map. Project-level quality
+This `analyze` subcommand does not produce a project-scope quality map. Project-level quality
 is an aggregate of the individual feature maps, read through views and
 observation sets.
 
@@ -137,16 +140,16 @@ The two modes share artifacts but split responsibilities:
 | --- | --- |
 | Feature `specs/<feature>/test-spec.md`, `test-report.md`, `TESTING.md` | `/shiplight cover` |
 | Feature `.quality-center/evidence/<feature>/quality-map.yaml` construction, Runtime Join Contract, product-language check writing | `evidence` |
-| `.quality-center/config/observation-sources.yaml`, `config/observation-sets.yaml`, `config/views.yaml` | this `analyze` mode |
-| `quality-tools analyze` runs and recommendation triage | this `analyze` mode |
-| Repo-wide `fix-prompts` generation | this `analyze` mode |
+| `.quality-center/config/observation-sources.yaml`, `config/observation-sets.yaml`, `config/views.yaml` | this `analyze` subcommand |
+| `quality-tools analyze` runs and recommendation triage | this `analyze` subcommand |
+| Repo-wide `fix-prompts` generation | this `analyze` subcommand |
 
 When a recommendation requires deep rework of one feature's evidence — new
 testing-what items, restructured expectations, new test authoring against the
 feature's spec — run the `evidence` workflow for that target rather
 than editing its artifacts ad hoc. Small contract-conformant fixes to a feature
 map (correcting an `evidence.path`, pinning a `test_case`, updating a
-`proof_gap`) may be applied directly from this `analyze` mode; follow the
+`proof_gap`) may be applied directly from this `analyze` subcommand; follow the
 `evidence` map contract and preserve stable ids.
 
 Before editing any feature `quality-map.yaml` or authoring emitted
@@ -334,7 +337,7 @@ before editing anything:
    shows missing or failing proof. Emit `fix-prompts` for the gap; tests are
    authored by `/shiplight cover` and mapped by the `evidence` subcommand. For deep
    per-feature rework, run the `evidence` workflow for that target. This
-   `analyze` mode does not author tests.
+   `analyze` subcommand does not author tests.
 6. **Scope problem**: view membership or observation-set bundling reads wrong.
    Fix `views.yaml` or `observation-sets.yaml`.
 
@@ -400,7 +403,7 @@ workflow.
 Many release gates are smoke or health checks that run in CI but are not test
 files (exit-code assertions, probes, healthchecks). The map side — the quality
 check with `path` at the workflow file and `test_case` naming the proven unit —
-is covered by the `evidence` subcommand. This `analyze` mode owns the source side.
+is covered by the `evidence` subcommand. This `analyze` subcommand owns the source side.
 
 If the gate produces no machine-readable result, add or adjust a workflow step
 that writes a small JSON observation report (see the manifest contract in
@@ -479,7 +482,7 @@ For validation, use `assets/views.schema.json`.
 
 ## Operating Rules
 
-- This `analyze` mode may edit `.quality-center/config/observation-sources.yaml`,
+- This `analyze` subcommand may edit `.quality-center/config/observation-sources.yaml`,
   `.quality-center/config/observation-sets.yaml`, `.quality-center/config/views.yaml`, CI
   workflow observation-emit steps (when authorized), and — for
   contract-conformant join-key and proof-gap fixes (`evidence.path`,
@@ -498,7 +501,7 @@ For validation, use `assets/views.schema.json`.
   saved-review bundling, or reader-slice membership into feature
   `quality-map.yaml` files. Keep the proof-definition join in feature evidence
   via canonical repo-relative test file paths.
-- Never invent a new feature target or mint a new `NNN-` slug from this `analyze` mode.
+- Never invent a new feature target or mint a new `NNN-` slug from this `analyze` subcommand.
 - Do not optimize any of the four scores as an objective. In particular, never
   promote `structure_provenance` (e.g. to `spec`/`user_authored`) to lift
   structure confidence without genuine human ratification, and do not remove

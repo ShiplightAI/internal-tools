@@ -19,8 +19,12 @@ ownership and the edit contract:
 
 Rules:
 
-- Each subcommand owns its own tree above and must not author another's.
-  `fix-prompts.md` and `generated/*` are written by `quality-tools` only — treat
+- Each subcommand owns its own tree above and must not author another's — with
+  one carve-out: the `analyze` subcommand may apply contract-conformant join-key
+  and `proof_gap` fixes (`evidence.path`, `evidence.test_case`, `proof_gap`) to
+  `evidence/**/quality-map.yaml`, following the `evidence` map contract and never
+  authoring checks or structure (see the `analyze` Operating Rules).
+- `fix-prompts.md` and `generated/*` are written by `quality-tools` only — treat
   them as read-only.
 - Quality reads, but never writes, the **producer** artifacts it indexes:
   `specs/<feature>/test-spec.md`, `specs/<feature>/test-report.md`, `TESTING.md`,

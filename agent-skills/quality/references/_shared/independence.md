@@ -27,11 +27,30 @@ producers — never a subcommand of them.
    evidence `type`, Quality confirms it against the artifact at `evidence.path`
    rather than trusting the report's self-claim — the judge does not copy the
    generator's label.
-4. **Human ratification gate.** `structure_provenance` (inferred_brownfield →
-   user_authored → spec) is the only human-gated axis. An agent may **construct at
-   `inferred` and propose** checks/priorities/structure, but must **never
-   self-promote provenance** or ratify on the owner's behalf. Self-verification of
+4. **Human ratification gate.** Structure confidence is the only human-gated
+   axis, ratified through three gates (see below). An agent may **construct at the
+   untrusted default and propose** checks/priorities/structure, but must **never
+   self-advance a gate** or ratify on the owner's behalf. Self-verification of
    structure is disallowed by design.
+
+## Structure confidence: the three ratification gates
+
+Mechanism 4 is enforced through **three ratification gates** — each a separate
+field the deterministic `quality-tools` engine reads, never an agent's edit. The
+engine composes them into the structure-confidence score; the numbers below are
+the current rubric, not a target to optimize toward or reverse-engineer.
+
+| Gate | Field | Artifact / owner | What it ratifies |
+| --- | --- | --- | --- |
+| 1 | `structure_provenance` | `quality-map.yaml` / `evidence` | the check list *and its priorities* came from a trusted source — `spec`/`user_authored` = 1.0, `agent_generated` = 0.7, `inferred_brownfield` = 0.4, `unspecified` = 0 (counted, earns no trust) |
+| 2 | feature `status` | `project-map.yaml` / `project` | the feature is real product truth — a `candidate` (agent-proposed, unratified) feature soft-caps its checks' structure confidence at 0.7 until a human ratifies it (e.g. `active`) |
+| 3 | `priority_provenance` | `project-map.yaml` / `project` | the declared priority is human-set (`human`) rather than agent-guessed (`agent`); the agent must not overwrite a human-set priority on rebuild |
+
+`evidence` owns gate 1; `project` owns gates 2–3. When either subcommand says it
+"owns structure confidence," it means *its* gate(s) — the score is the engine's
+join of all three and is never owned end-to-end by one subcommand. An agent may
+construct at the untrusted end of every gate (`inferred_brownfield`, `candidate`,
+`agent`) and propose, but must never self-advance any gate on the owner's behalf.
 
 ## Layering rule
 
