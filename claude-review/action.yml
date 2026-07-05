@@ -1,8 +1,8 @@
 name: "Shiplight Claude Code Review"
 description: >
   Formal, severity-based PR review via anthropics/claude-code-action: approves
-  when there are no CRITICAL/HIGH findings, requests changes for CRITICAL/HIGH,
-  comments when unsure. Wraps the canonical internal review so consumer repos
+  when there are no CRITICAL/HIGH/MEDIUM findings, requests changes for any
+  CRITICAL/HIGH/MEDIUM, comments when unsure. Wraps the canonical internal review so consumer repos
   only keep a ~15-line trigger workflow. The trigger + permissions still live in
   the caller workflow (GitHub requirement + claude-code-action's tamper guard);
   the prompt, approval logic, and pinned action refs live here.

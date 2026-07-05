@@ -1,6 +1,6 @@
 ---
 name: code-review-run
-description: Run a multi-lens local code review (correctness, security, performance, test coverage, conventions); blocks on MEDIUM+, optionally saves a ranked report, and supports multi-round reviews that reconcile prior findings.
+description: Run a multi-lens local code review (correctness, security, performance, test coverage, conventions); blocks on MEDIUM+, optionally saves a ranked report, supports multi-round reviews that reconcile prior findings, and can mirror the CI claude-review gate to clear all blockers before opening/updating a PR.
 user_invocable: true
 ---
 
@@ -93,6 +93,23 @@ direction. Add a 'verified-and-cleared' section." \
 - `--output-format stream-json --include-partial-messages --verbose` is the default for headless runs so long reviews emit realtime JSON events and partial assistant chunks before any external timeout. It only works with `--print` / `-p`. If logs are too noisy, drop `--include-partial-messages`.
 - Optional: `--max-budget-usd <n>` (spend cap).
 - **Lens note:** the one-liner above runs the **correctness lens only**. For the full multi-lens review headless, spell out the lenses in the prompt rather than naming this skill (a headless session can't reliably invoke a skill by name) — e.g. `claude -p "Review <scope> across five lenses — correctness, security, performance, test coverage, conventions — scoped to the diff only; normalize to CRITICAL/HIGH/MEDIUM/LOW and treat MEDIUM+ as blocking; write a ranked report to <path>."` so the session spawns the lens subagents and merges their findings.
+
+## Mirroring the CI claude-review gate (pre-PR)
+
+When you run this skill **before opening or updating a PR**, align it to the same gate the CI review bot will apply, so a clean local pass predicts a bot approval and you clear every blocker before spending a GitHub Actions round-trip. (This complements the `auto-pr` skill, which owns the full create → review → merge lifecycle; use this section when you want the local pass to mirror that flow's CI gate.)
+
+Many repos wire a required GitHub review bot via a thin caller workflow under `.github/workflows/` whose step does `uses: ShiplightAI/internal-tools/claude-review@<ref>`. That bot classifies findings CRITICAL/HIGH/MEDIUM/LOW and **requests changes on any CRITICAL, HIGH, or MEDIUM** — the *same* MEDIUM+ bar this skill already enforces. So the only repo-specific thing to source is the emphasis the bot is told to weight. Do NOT copy that emphasis into this skill or a script — derive it from the canonical config at review time:
+
+1. **Detect the gate.** Look for a workflow in `.github/workflows/` with a step `uses: ShiplightAI/internal-tools/claude-review@<ref>` (grep the workflows dir). If none is wired, skip this section and run the normal multi-lens review.
+2. **Adopt the repo's review-focus.** That caller workflow passes a `review-focus:` input — the repo's own invariants the bot weights (e.g. data-access boundaries, identity segregation, migration safety, UI rules). Read it directly from the workflow file and use it as this skill's focus string (see "Optional focus"), merged with any focus the user passed. This is the single source of truth for the focus — it updates automatically when the workflow changes.
+3. **Match the scope.** The bot reviews the PR diff against its base branch; scope all lenses to the same diff (base = the PR's target branch, defaulting to `main`).
+4. **(Optional) verbatim base prompt.** The bot's base prompt + severity wording live in the action at the pinned ref. The five lenses and the MEDIUM+ bar already match it, so this is rarely needed — fetch it only if you want the exact wording:
+   ```bash
+   gh api "repos/ShiplightAI/internal-tools/contents/claude-review/action.yml?ref=<ref>" \
+     --jq '.content' | base64 -d
+   ```
+
+Then run the normal review-fix loop and report the outcome in the bot's terms: **PASS** (no CRITICAL/HIGH/MEDIUM — the bot would approve) or **BLOCKED** (list each blocker with `file:line`). Reaching PASS locally is the state to be in before you push.
 
 ## Saving a report
 
