@@ -24,32 +24,32 @@ Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 From a target project repo, install for Codex:
 
 ```bash
-npx skills add ShiplightAI/internal-agent-skills -a codex -y
+npx skills add ShiplightAI/internal-tools/agent-skills -a codex -y
 ```
 
 Install for another `skills`-supported agent by changing the `-a` value:
 
 ```bash
-npx skills add ShiplightAI/internal-agent-skills -a claude-code -y
-npx skills add ShiplightAI/internal-agent-skills -a gemini -y
+npx skills add ShiplightAI/internal-tools/agent-skills -a claude-code -y
+npx skills add ShiplightAI/internal-tools/agent-skills -a gemini -y
 ```
 
 Install for all supported agents detected by `skills`:
 
 ```bash
-npx skills add ShiplightAI/internal-agent-skills --all
+npx skills add ShiplightAI/internal-tools/agent-skills --all
 ```
 
 Useful `skills add` flags include `-a/--agent`, `-s/--skill`, `-g/--global`,
 `--copy`, `--all`, and `-y/--yes`.
 
 The repository is private, so developers need GitHub access that the `skills`
-CLI can use when cloning `ShiplightAI/internal-agent-skills`.
+CLI can use when cloning `ShiplightAI/internal-tools`.
 
 ## Install Individual Skills
 
 ```bash
-npx skills add ShiplightAI/internal-agent-skills --skill auto-pr -a codex -y
+npx skills add ShiplightAI/internal-tools/agent-skills --skill auto-pr -a codex -y
 ```
 
 ## Update

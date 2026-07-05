@@ -37,6 +37,6 @@ across every repo.
   merge. Every PR after it lands gets auto-reviewed. Editing only the
   `claude-review` action does NOT trip the guard in consumer repos — that's the
   point of the split.
-- `internal-agent-skills` must allow its Actions to be used by other org repos
+- `internal-tools` must allow its Actions to be used by other org repos
   (Settings → Actions → Access → "Accessible from repositories in the
   organization"), or callers fail to resolve the action.
