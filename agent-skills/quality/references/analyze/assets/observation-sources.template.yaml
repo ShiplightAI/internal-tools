@@ -7,7 +7,7 @@ profiles:
     source_refs:
       - path: ".github/workflows/publish.yml"
         label: "Workflow source"
-      - path: ".quality-center/evidence/002-example-feature/quality-map.yaml"
+      - path: ".quality/evidence/002-example-feature/quality-map.yaml"
         label: "Feature quality map"
 
     auth:

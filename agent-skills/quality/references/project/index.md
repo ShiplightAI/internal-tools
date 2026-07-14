@@ -1,7 +1,7 @@
 # project — Build/maintain the project map
 
-The `project` subcommand of Quality Center: construct and maintain the project
-index (`project-map.yaml`) and read the project's quality scores with their
+The `project` subcommand of the `/quality` skill: construct and maintain the
+project map (`project-map.yaml`) and read the project's quality scores with their
 structure-confidence gate.
 
 ## Read first
@@ -9,13 +9,13 @@ structure-confidence gate.
 - `_shared/independence.md`
 - `_shared/layout.md`
 
-Project-level index construction. Use this to build or repair `project-map.yaml`,
+Project-level map construction. Use this to build or repair `project-map.yaml`,
 group features into release areas, classify and record incoming change,
 reconstruct features from an existing codebase, surface cross-feature drift, and
 read the project's quality scores with their structure-confidence gate.
 
-This is the **`project` subcommand of Quality Center**. It reads the artifacts
-that development produces and constructs the index; it does not generate them:
+This is the **`project` subcommand of the `/quality` skill**. It reads the
+artifacts that development produces and constructs the map; it does not generate them:
 
 - It does **not** drive development, write the PRD, the feature breakdown, or
   specs, or switch branches — that is `speckit-project` (development bundle).
@@ -30,11 +30,11 @@ request is to drive development, hand off to `speckit-project`.
 
 ## What This Skill Constructs
 
-`project-map.yaml` (at `.quality-center/project-map.yaml`): project identity,
+`project-map.yaml` (at `.quality/project-map.yaml`): project identity,
 release areas, the feature graph and dependencies, canonical artifact paths,
 cross-feature concerns, source types, and the `active_feature` pointer (reflected
 from the dev branch/pointers). It links to each feature's
-`.quality-center/evidence/<feature>/quality-map.yaml`; it does **not** produce a
+`.quality/evidence/<feature>/quality-map.yaml`; it does **not** produce a
 project-scope quality map. It owns no run outcomes — pass/fail,
 freshness, and readiness are derived from observations.
 
@@ -49,8 +49,9 @@ the next gate. Do not create or edit files unless asked.
 ## Backbone And Construction
 
 The project-map and the per-feature quality-maps are the stable **backbone** —
-fixed-shape data structures that downstream tools (Quality Center scores, runtime
-join, dashboards) read regardless of where their content came from. How the
+fixed-shape data structures that downstream tools (the `quality-tools` scoring
+engine, runtime join, the Quality Center dashboards) read regardless of where
+their content came from. How the
 backbone gets populated is **construction**, and it is the same path everywhere —
 only the confidence differs:
 
@@ -70,8 +71,8 @@ reconstructed — because provenance is per artifact, not per project. Spec-driv
 development (via `speckit-project`) is one optional constructor, not a
 prerequisite.
 
-`structure_provenance` is the join key for Quality Center's **structure
-confidence** score, exactly as `evidence.path` is the join key for runtime
+`structure_provenance` is the join key for the **structure confidence** score,
+exactly as `evidence.path` is the join key for runtime
 review. It is owned by the `evidence` subcommand per feature; this skill drives *when*
 construction and ratification happen across the project, and records the matching
 project-map facts.
@@ -92,7 +93,7 @@ user decision or accepted document.
 ## Recording Change Classification
 
 Development classifies incoming work (new feature vs cross-cutting) to decide
-branching; this skill records the result in the index:
+branching; this skill records the result in the project map:
 
 - **New feature**: add a feature entry with its declared priority, dependencies,
   and artifact paths once `speckit-project` creates it.
@@ -103,7 +104,7 @@ branching; this skill records the result in the index:
 
 ## Brownfield Reconstruction
 
-Use when constructing the index from a repo that did not use Spec Kit. Runs
+Use when constructing the map from a repo that did not use Spec Kit. Runs
 read-only without Spec Kit installed.
 
 Posture: **user-driven + agent-ingest.** The user supplies intent pointers (PRD
@@ -154,8 +155,8 @@ PR, and merge operations require an explicit user request or `auto-pr`.
 ## Quality And Release Gates
 
 The project map links to each feature's quality map; project-level quality is an
-aggregate of those maps. Quality Center reports four scores over the aggregate
-(quality, coverage, evidence confidence, structure confidence), shown side by
+aggregate of those maps. The `quality-tools` engine reports four scores over the
+aggregate (quality, coverage, evidence confidence, structure confidence), shown side by
 side and never blended — the `analyze` subcommand owns the full model.
 
 This skill owns the feature-level ratification gates that feed **structure
@@ -178,11 +179,11 @@ ratification gates".
   subcommand (map them, `fix-prompts`); the runtime quality score through the
   `analyze` subcommand.
 
-Do not report a feature as done in the index unless its spec/tasks are
+Do not report a feature as done in the project map unless its spec/tasks are
 reconciled, implementation is complete for the accepted scope, relevant tests
 passed or residual risks are documented, and evidence is linked from the project
 map. Verification and code review are themselves development-workflow steps that
-`speckit-project` sequences; this skill records their outcomes in the index, it
+`speckit-project` sequences; this skill records their outcomes in the project map, it
 does not run them.
 
 ## When Not To Use
@@ -190,7 +191,7 @@ does not run them.
 - When the user wants to drive development, write a PRD/feature breakdown, or run
   the spec lifecycle: use `speckit-project`.
 - When the user wants tests created: use `/shiplight cover`.
-- When the user wants one feature's quality index/scores: use the `evidence`
+- When the user wants one feature's quality map/scores: use the `evidence`
   subcommand.
 - When the user wants runtime-review wiring, observation sets, or saved views: use
   the `analyze` subcommand.

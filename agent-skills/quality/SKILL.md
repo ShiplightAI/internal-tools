@@ -1,9 +1,9 @@
 ---
 name: quality
-description: "Quality Center — assess and drive up the quality status of a project/product. A higher-level quality ORACLE, independent of test creation: it maintains feature maps (what must hold) and proof maps (how each is proven — tests are ONE evidence kind among manual checks, telemetry, static analysis), then scores quality + confidence via the deterministic quality-tools engine. Use ONLY when the user explicitly says 'quality center', 'qc', 'quality status/score/map/posture', or invokes /quality — NOT on a generic mention of the word 'quality' (e.g. 'improve code quality'). Routes to subcommands: project, evidence, analyze, help."
+description: "Quality — assess and drive up the quality status of a project/product. A higher-level quality ORACLE, independent of test creation: it maintains feature maps (what must hold) and proof maps (how each is proven — tests are ONE evidence kind among manual checks, telemetry, static analysis), then computes the quality index (four scores) via the deterministic quality-tools engine over the checked-in .quality/ backbone. Quality Center is the optional web UI that displays that index; the skill and engine produce it without any UI. Use ONLY when the user explicitly says 'quality', 'quality center', 'qc', 'quality status/score/index/map/posture', or invokes /quality — NOT on a generic mention of the word 'quality' (e.g. 'improve code quality'). Routes to subcommands: project, evidence, analyze, help."
 ---
 
-# Quality Center
+# Quality
 
 The single entry point for assessing and improving a project's **quality status**:
 *does the product do what it should, and is it proven, with justified confidence?*
@@ -11,6 +11,13 @@ This skill is a quality **oracle** — it sits **above** the tools that produce
 evidence and consumes their output as one source among many. It does not create
 tests; a project whose proof is plain unit tests, manual checks, or telemetry is
 assessed the same way as one using Shiplight tests.
+
+It computes a **quality index** — four scores (quality, coverage, evidence
+confidence, structure confidence) — with the deterministic **`quality-tools`**
+engine over the checked-in **`.quality/`** backbone (the project map, per-feature
+quality maps, and config). **Quality Center** is the optional web UI that
+*displays* that index; this skill and the engine produce it without any UI, so a
+coding agent can measure a release's quality with the skill and engine alone.
 
 **Read `references/_shared/independence.md` before doing anything** — it is the
 load-bearing principle (you cannot verify a system against itself) and it governs
@@ -21,7 +28,7 @@ every subcommand.
 Quality reads evidence and may hand gaps *down* to producers (e.g.
 `/shiplight cover`, `/shiplight create-yaml-tests`,
 `/shiplight create-agent-verification`) — top knows bottom. Those producer skills
-do **not** know about Quality Center. The dependency is one-directional: producers
+do **not** know about Quality. The dependency is one-directional: producers
 emit facts (e.g. `specs/<f>/test-report.md`); Quality reads/indexes/scores them and
 never authors a test.
 
@@ -48,7 +55,7 @@ never authors a test.
 ## Shared layer
 
 - `_shared/independence.md` — the principle + the four enforcement mechanisms.
-- `_shared/layout.md` — the `.quality-center/` tree and per-artifact ownership.
+- `_shared/layout.md` — the `.quality/` tree and per-artifact ownership.
 - `_shared/vocabularies.md` — test type, source type, priority (P0–P3), and the
   "facts not verdicts" rule.
 

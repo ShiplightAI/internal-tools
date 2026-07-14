@@ -75,7 +75,7 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
    - `LEGACY` for behavior that appears old or compatibility-driven.
 
 5. **Create provisional project map**
-   - Write it to `.quality-center/project-map.yaml`.
+   - Write it to `.quality/project-map.yaml`.
    - Include product-language project, release area, and feature summaries plus
      docs, code refs, test refs, open questions, and orphan areas.
 

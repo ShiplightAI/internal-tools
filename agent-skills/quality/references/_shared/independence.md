@@ -1,6 +1,6 @@
 # Shared: Independence — the load-bearing principle
 
-Quality Center exists because **you cannot verify a system against itself**. When
+Quality exists because **you cannot verify a system against itself**. When
 the same understanding writes the code, writes the tests, and pronounces the result
 good, the confidence it reports is circular — *self-verification is not
 verification; a system that grades its own homework will always pass.* As code
@@ -17,7 +17,7 @@ producers — never a subcommand of them.
 1. **One-directional artifact flow.** Producers emit facts (`test-spec.md`,
    `test-report.md`, test code, run results); Quality reads/indexes/scores them.
    Quality **never authors a test** or edits a producer artifact. Producers never
-   write a backbone YAML or touch `.quality-center/`.
+   write a backbone YAML or touch `.quality/`.
 2. **The engine scores, never the LLM.** The four scores are computed by the
    deterministic `quality-tools` engine from declared facts + runtime observations
    + human ratification — never an agent's opinion. Never blend, optimize, or

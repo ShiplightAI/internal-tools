@@ -1,8 +1,9 @@
 # evidence — Build/maintain a feature's quality map
 
 The `evidence` subcommand of the `/quality` router. Constructs and maintains one
-feature's quality index (`quality-map.yaml`) from existing artifacts so Quality
-Center can score coverage, evidence confidence, and structure confidence.
+feature's quality map (`quality-map.yaml`) from existing artifacts so the
+`quality-tools` engine can score coverage, evidence confidence, and structure
+confidence.
 
 ## Read first
 
@@ -10,30 +11,31 @@ Center can score coverage, evidence confidence, and structure confidence.
 - `_shared/layout.md`
 - `_shared/vocabularies.md`
 
-Quality-index construction for one feature, spec, module, PR, or ticket at a
+Quality-map construction for one feature, spec, module, PR, or ticket at a
 time. Use when the user wants a trustworthy `quality-map.yaml` for a feature —
 the right set of quality checks, each with its declared priority, its proof
 mapped as evidence, honest structure provenance, and concrete proof gaps — so
-Quality Center can score coverage, evidence confidence, and structure confidence.
+the `quality-tools` engine can score coverage, evidence confidence, and structure
+confidence.
 
-This is the `evidence` subcommand of Quality Center. It reads facts and
-constructs the index; it does not generate them:
+This is the `evidence` subcommand of the `/quality` skill. It reads facts and
+constructs the map; it does not generate them:
 
 - It does **not** create tests or pick testing strategy — that is `/shiplight
   cover`. This subcommand reads the test-spec, the test-report, and the actual
   test files and indexes what exists.
 - It does **not** wire observations, observation sets, saved views, or run
   `@shiplightai/quality-tools analyze` — that is the `analyze` subcommand.
-- It does **not** author `.quality-center/project-map.yaml` — that is the
+- It does **not** author `.quality/project-map.yaml` — that is the
   `project` subcommand.
 
 Project-wide quality improvement across many feature maps belongs to the
 `analyze` subcommand. When the request is about overall project quality rather
-than one feature's index, use that mode.
+than one feature's map, use that mode.
 
 ## What This Skill Constructs
 
-Per target, at `.quality-center/evidence/<target-slug>/quality-map.yaml`: the structural
+Per target, at `.quality/evidence/<target-slug>/quality-map.yaml`: the structural
 proof-definition graph — the quality checks (`expectations`), each carrying a
 declared `priority`, evidence rows (`type` + `path`), `structure_provenance`,
 and `proof_gap` guidance. It is structural only: no run outcomes, timestamps,
@@ -41,8 +43,8 @@ freshness, or confidence rollups (those are observations/evaluations).
 
 It does **not** author `test-spec.md` / `test-report.md` (owned by
 `/shiplight cover`, in `specs/<feature>/`), the dev-owned testing strategy
-(`TESTING.md`), `.quality-center/project-map.yaml` (owned by the `project`
-subcommand), or `.quality-center/config/*` and `.quality-center/generated/*`
+(`TESTING.md`), `.quality/project-map.yaml` (owned by the `project`
+subcommand), or `.quality/config/*` and `.quality/generated/*`
 (owned by the `analyze` subcommand).
 
 ## Inputs, Facts, And Independence
@@ -75,7 +77,7 @@ judgments**, and it verifies facts rather than copying the dev session's claims:
 
 Use stable `NNN-kebab-case-name` slugs so specs, tasks, maps, reports, tests,
 and UI routes join reliably. If `specs/NNN-feature-name` exists, the default
-index target is `.quality-center/evidence/NNN-feature-name/`. Reuse an existing numeric
+index target is `.quality/evidence/NNN-feature-name/`. Reuse an existing numeric
 prefix; never drop `NNN-`. Mint a new slug only for a genuine feature or spec,
 never to host project-wide or multi-feature work. Preserve old slugs under
 `target.aliases`.
@@ -119,7 +121,7 @@ behavior, browser or CLI execution, deployment wiring, or release gates.
 ## Structure Provenance And Structure Confidence
 
 Declare `structure_provenance` at the top of `quality-map.yaml` (and optionally
-per check) so Quality Center can report **structure confidence** — how much the
+per check) so the `quality-tools` engine can report **structure confidence** — how much the
 map's structure (its set of checks *and their priorities*) can be trusted — as a
 separate axis from evidence confidence. Evidence confidence asks "is each check
 proven?"; structure confidence asks "is this the right set of checks at the
@@ -219,7 +221,7 @@ Invocation shortcut: `fix-prompts`. Interpret `evidence fix-prompts` as:
 npx @shiplightai/quality-tools fix-prompts \
   --project-path <repo-root> \
   --target <target-id> \
-  --output .quality-center/fix-prompts.md
+  --output .quality/fix-prompts.md
 ```
 
 Accept script-style options after the shortcut (e.g. `--target 026-... --limit
@@ -248,7 +250,7 @@ map.
 6. **Validate.** Validate against `assets/quality-map.schema.json`. Keep the map
    structural — no run outcomes or rollups.
 7. **Optional runtime hand-off.** When the user wants observations, hand the
-   `.quality-center/config/*` wiring to the `analyze` subcommand; this
+   `.quality/config/*` wiring to the `analyze` subcommand; this
    subcommand's contribution is the map side (evidence `path`/`test_case` and
    proof gaps).
 
@@ -256,20 +258,20 @@ map.
 
 | Artifact | Template | Schema |
 | --- | --- | --- |
-| `.quality-center/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `assets/quality-map.schema.json` |
+| `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `assets/quality-map.schema.json` |
 
 Map-side vocabularies (and what is owned elsewhere) live in
 `_shared/vocabularies.md`. For `test-spec.md` / `test-report.md` see `/shiplight
-cover`; for `.quality-center/config/*` see the `analyze` subcommand.
+cover`; for `.quality/config/*` see the `analyze` subcommand.
 
 ## Operating Rules
 
-- Constructs and edits `.quality-center/evidence/**` only (the `analyze`
+- Constructs and edits `.quality/evidence/**` only (the `analyze`
   subcommand may also apply contract-conformant join-key/`proof_gap` fixes there).
   Does not create tests,
   author `test-spec.md`/`test-report.md` (dev-owned, in `specs/<feature>/`),
-  author `.quality-center/project-map.yaml`, or touch the rest of
-  `.quality-center/**` (config and generated output, owned by the `analyze`
+  author `.quality/project-map.yaml`, or touch the rest of
+  `.quality/**` (config and generated output, owned by the `analyze`
   subcommand).
 - Never author `depth`, `reliability`, a risk weight, or a `HIGH/MEDIUM/LOW`
   verdict; `priority` and evidence `type` are read/confirmed facts (see Inputs,

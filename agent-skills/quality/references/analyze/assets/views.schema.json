@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://shiplight.dev/schemas/quality-center/views.schema.json",
-  "title": "Quality Center Saved Views",
+  "$id": "https://shiplight.dev/schemas/quality/views.schema.json",
+  "title": "Quality Saved Views",
   "type": "object",
   "additionalProperties": false,
   "required": ["views"],

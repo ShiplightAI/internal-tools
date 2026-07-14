@@ -1,4 +1,4 @@
-# Canonical location: .quality-center/project-map.yaml
+# Canonical location: .quality/project-map.yaml
 project:
   id: "<project-slug>"
   name: "<Project Name>"
@@ -57,7 +57,7 @@ features:
       plan_path: "specs/001-example-feature/plan.md"
       tasks_path: "specs/001-example-feature/tasks.md"
       checklist_paths: []
-      quality_map_path: ".quality-center/evidence/001-example-feature/quality-map.yaml"
+      quality_map_path: ".quality/evidence/001-example-feature/quality-map.yaml"
       test_report_path: "specs/001-example-feature/test-report.md"
     code_refs: []
     evidence_refs: []
