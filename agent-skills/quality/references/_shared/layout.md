@@ -1,11 +1,11 @@
-# Shared: The `.quality-center/` layout & ownership
+# Shared: The `.quality/` layout & ownership
 
-All Quality Center artifacts live under `.quality-center/` at the repo root,
+All quality artifacts live under `.quality/` at the repo root,
 separate from the producers' `specs/` + `tests/` + `.shiplight/`. Per-artifact
 ownership and the edit contract:
 
 ```text
-.quality-center/
+.quality/
 ├── project-map.yaml                         owned by `project`  (features, release areas)
 ├── evidence/<target-slug>/quality-map.yaml  owned by `evidence` (per-feature proof graph)
 ├── config/

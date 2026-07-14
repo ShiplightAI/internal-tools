@@ -1,6 +1,6 @@
 # analyze — Observations, scoring, and triage
 
-The `analyze` subcommand of the `/quality` router: the heaviest Quality Center
+The `analyze` subcommand of the `/quality` router: the heaviest `/quality`
 workflow, covering observation config, the four scores, recommendation analysis,
 and triage.
 
@@ -17,13 +17,13 @@ views, running recommendation analysis, and working down the generated
 recommendations across multiple feature quality maps.
 
 This `analyze` subcommand never works on a single new feature target. Single-feature index
-construction — building `.quality-center/evidence/<target>/quality-map.yaml` — belongs to
+construction — building `.quality/evidence/<target>/quality-map.yaml` — belongs to
 the `evidence` subcommand, and the dev artifacts it reads
 (`specs/<feature>/test-spec.md`, `test-report.md`) belong to `/shiplight cover`.
 This `analyze` subcommand consumes those feature maps as existing inputs and improves the
 evidence system around and across them.
 
-In this `analyze` subcommand, `.quality-center` is the checked-in quality artifact namespace
+In this `analyze` subcommand, `.quality` is the checked-in quality artifact namespace
 that Shiplight tooling reads: observation sources, observation sets, saved reader
 views, and generated recommendations. Agents should use
 `@shiplightai/quality-tools` for runtime analysis and generated recommendations.
@@ -34,11 +34,11 @@ Feature quality maps are the structural proof definitions. Observation runs join
 runtime results onto them through a repo-scoped config layer:
 
 ```text
-.quality-center/evidence/<target>/quality-map.yaml   structural proof definition (per feature)
+.quality/evidence/<target>/quality-map.yaml   structural proof definition (per feature)
         ↓
-.quality-center/config/observation-sources.yaml      where runtime results come from
+.quality/config/observation-sources.yaml      where runtime results come from
         ↓
-.quality-center/config/observation-sets.yaml          which profiles are reviewed together
+.quality/config/observation-sets.yaml          which profiles are reviewed together
         ↓
 quality-tools analyze                                observation-backed recommendations
                                                      and review state
@@ -49,11 +49,11 @@ The layers are separate, and each answers exactly one question:
 - `quality-map.yaml` — feature-scoped, owned by the `evidence` subcommand (its
   template/schema live in that subcommand's assets): what counts as proof for the
   feature.
-- `.quality-center/config/observation-sources.yaml` — repo-scoped: where runtime
+- `.quality/config/observation-sources.yaml` — repo-scoped: where runtime
   results come from.
-- `.quality-center/config/observation-sets.yaml` — repo-scoped: which profiles are
+- `.quality/config/observation-sets.yaml` — repo-scoped: which profiles are
   reviewed together.
-- `.quality-center/config/views.yaml` — repo-scoped: which project-map feature ids are
+- `.quality/config/views.yaml` — repo-scoped: which project-map feature ids are
   read together as saved reader slices.
 
 Observation-backed evaluation is a join, not a second proof definition. Quality
@@ -62,15 +62,15 @@ them to quality-map evidence by canonical proof-source path plus optional
 `test_case`, under the Runtime Join Contract defined in the `evidence`
 subcommand. Joined observations make the affected expectation observed as
 pass/fail/error/skipped; no matching observation leaves it `unobserved`. The
-observation-backed quality score is one of four scores Quality Center reports
+observation-backed quality score is one of four scores the `quality-tools` engine reports
 (see Quality Scores); do not edit maps, scopes, views, or `structure_provenance`
 to optimize any of them.
 
 ## Quality Scores
 
-Quality Center reports **one observation-backed quality score plus three
-structural scores**. They answer different questions and are shown side by side,
-**never blended** into one number.
+The `quality-tools` engine reports **one observation-backed quality score plus
+three structural scores** — together the **quality index**. They answer different
+questions and are shown side by side, **never blended** into one number.
 
 | Score | Kind | Answers | Raised by |
 | --- | --- | --- | --- |
@@ -119,8 +119,8 @@ Split improvement work by which score it raises:
 Resolve the review scope before changing anything. Valid scopes:
 
 - the whole project (all discovered feature quality maps)
-- a saved view from `.quality-center/config/views.yaml`
-- an observation set from `.quality-center/config/observation-sets.yaml`
+- a saved view from `.quality/config/views.yaml`
+- an observation set from `.quality/config/observation-sets.yaml`
 - an existing generated recommendations file the user points to
 
 Never invent a new feature target for project-level work, and never mint a new
@@ -139,8 +139,8 @@ The two modes share artifacts but split responsibilities:
 | Concern | Owner |
 | --- | --- |
 | Feature `specs/<feature>/test-spec.md`, `test-report.md`, `TESTING.md` | `/shiplight cover` |
-| Feature `.quality-center/evidence/<feature>/quality-map.yaml` construction, Runtime Join Contract, product-language check writing | `evidence` |
-| `.quality-center/config/observation-sources.yaml`, `config/observation-sets.yaml`, `config/views.yaml` | this `analyze` subcommand |
+| Feature `.quality/evidence/<feature>/quality-map.yaml` construction, Runtime Join Contract, product-language check writing | `evidence` |
+| `.quality/config/observation-sources.yaml`, `config/observation-sets.yaml`, `config/views.yaml` | this `analyze` subcommand |
 | `quality-tools analyze` runs and recommendation triage | this `analyze` subcommand |
 | Repo-wide `fix-prompts` generation | this `analyze` subcommand |
 
@@ -161,11 +161,11 @@ Join Contract section and validate map edits against its schema,
 
 Create or update these repo-scoped artifacts:
 
-- `.quality-center/config/observation-sources.yaml` from
+- `.quality/config/observation-sources.yaml` from
   `assets/observation-sources.template.yaml`
-- `.quality-center/config/observation-sets.yaml` from
+- `.quality/config/observation-sets.yaml` from
   `assets/observation-sets.template.yaml`
-- `.quality-center/config/views.yaml` from `assets/views.template.yaml`
+- `.quality/config/views.yaml` from `assets/views.template.yaml`
 
 Validate against:
 
@@ -177,7 +177,7 @@ These schema files mirror the current Shiplight quality artifact parser
 contract.
 
 Generated analysis output lands in
-`.quality-center/generated/recommendations/<observation-set-id>--<scope-id>.json`.
+`.quality/generated/recommendations/<observation-set-id>--<scope-id>.json`.
 Treat generated files as tool output to read, not artifacts to author.
 
 Keep observation config proportional. Do not create these files just because
@@ -191,9 +191,9 @@ release review, or observation ingestion.
 - Resolve the review scope (whole project, saved view, observation set, or
   recommendations file).
 - Inventory existing inputs: the primary project map
-  (`.quality-center/project-map.yaml`), feature maps under
-  `.quality-center/evidence/**/quality-map.yaml`, existing
-  `.quality-center/config/*` config, the dev-owned testing strategy
+  (`.quality/project-map.yaml`), feature maps under
+  `.quality/evidence/**/quality-map.yaml`, existing
+  `.quality/config/*` config, the dev-owned testing strategy
   (`TESTING.md`), CI workflows, and local result folders.
 - Record which inputs exist and which are missing. Missing feature maps for
   important features are themselves a finding: recommend an `evidence`
@@ -249,9 +249,9 @@ Rules:
 - `name` must be short and user-facing.
 - `description` is optional but recommended when the grouping is not obvious.
 - `feature_ids` must reference existing primary project-map feature ids exactly:
-  the `features[].id` values from the repo's `.quality-center/project-map.yaml`
+  the `features[].id` values from the repo's `.quality/project-map.yaml`
   artifact. These often match feature target slugs, but do not infer them from
-  `.quality-center/evidence/<target>/quality-map.yaml`; read the project map.
+  `.quality/evidence/<target>/quality-map.yaml`; read the project map.
 - Each saved view must include at least one feature id.
 - Do not create saved views when the repo has no primary project map; there is
   no authoritative feature list to validate the view membership.
@@ -278,7 +278,7 @@ npx @shiplightai/quality-tools analyze \
 ```
 
 The command writes
-`.quality-center/generated/recommendations/<observation-set-id>--<scope-id>.json`.
+`.quality/generated/recommendations/<observation-set-id>--<scope-id>.json`.
 
 Read the generated JSON as feedback for evidence-system work only: fix tests,
 workflow artifact emission, observation-source config, observation-set config,
@@ -377,7 +377,7 @@ quality maps with the package command:
 ```bash
 npx @shiplightai/quality-tools fix-prompts \
   --project-path <repo-root> \
-  --output .quality-center/fix-prompts.md
+  --output .quality/fix-prompts.md
 ```
 
 Useful options:
@@ -389,7 +389,7 @@ Useful options:
 
 Relative `--output` paths are resolved under `<repo-root>`.
 
-The command scans `.quality-center/evidence/**/quality-map.yaml`. It uses quality-map
+The command scans `.quality/evidence/**/quality-map.yaml`. It uses quality-map
 target ids and names for affected feature/spec identity; do not infer feature
 ownership from test file names. It reads structural proof gaps, evidence `type`,
 commands, paths, and notes from the current map contract; it does not depend on
@@ -421,7 +421,7 @@ other JSON, so the reader targets the one report instead of globbing every
 
 ## Artifact Skeletons
 
-`.quality-center/config/observation-sources.yaml`:
+`.quality/config/observation-sources.yaml`:
 
 ```yaml
 profiles:
@@ -452,7 +452,7 @@ profiles:
 For the full starter, copy `assets/observation-sources.template.yaml`.
 For validation, use `assets/observation-sources.schema.json`.
 
-`.quality-center/config/observation-sets.yaml`:
+`.quality/config/observation-sets.yaml`:
 
 ```yaml
 observation_sets:
@@ -465,7 +465,7 @@ observation_sets:
 For the full starter, copy `assets/observation-sets.template.yaml`.
 For validation, use `assets/observation-sets.schema.json`.
 
-`.quality-center/config/views.yaml`:
+`.quality/config/views.yaml`:
 
 ```yaml
 views:
@@ -482,13 +482,13 @@ For validation, use `assets/views.schema.json`.
 
 ## Operating Rules
 
-- This `analyze` subcommand may edit `.quality-center/config/observation-sources.yaml`,
-  `.quality-center/config/observation-sets.yaml`, `.quality-center/config/views.yaml`, CI
+- This `analyze` subcommand may edit `.quality/config/observation-sources.yaml`,
+  `.quality/config/observation-sets.yaml`, `.quality/config/views.yaml`, CI
   workflow observation-emit steps (when authorized), and — for
   contract-conformant join-key and proof-gap fixes (`evidence.path`,
   `evidence.test_case`, `proof_gap`), after reading the `evidence`
   contract per Relationship To the `evidence` subcommand — feature
-  `.quality-center/evidence/**/quality-map.yaml` files. It does **not** author or edit
+  `.quality/evidence/**/quality-map.yaml` files. It does **not** author or edit
   tests, fixtures, or test scripts (owned by `/shiplight cover`), nor feature
   `specs/<feature>/test-spec.md` or `test-report.md`; when a fix needs new tests
   or makes those stale, run the `/shiplight cover` workflow for that target or flag
@@ -497,7 +497,7 @@ For validation, use `assets/views.schema.json`.
   quality maps: preserve stable ids, use the schema enums, keep maps
   structural, and never write run outcomes, timestamps, freshness, or
   confidence rollups into them.
-- Keep `.quality-center/*` repo-scoped. Do not duplicate source-acquisition,
+- Keep `.quality/*` repo-scoped. Do not duplicate source-acquisition,
   saved-review bundling, or reader-slice membership into feature
   `quality-map.yaml` files. Keep the proof-definition join in feature evidence
   via canonical repo-relative test file paths.

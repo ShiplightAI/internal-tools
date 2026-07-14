@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://shiplight.dev/schemas/quality-center/observation-sources.schema.json",
-  "title": "Quality Center Observation Source Profiles",
+  "$id": "https://shiplight.dev/schemas/quality/observation-sources.schema.json",
+  "title": "Quality Observation Source Profiles",
   "type": "object",
   "additionalProperties": false,
   "required": ["profiles"],

@@ -14,8 +14,8 @@ and discovery fields.
 
 ## Location
 
-The project map lives at `.quality-center/project-map.yaml` — the consolidated
-Quality Center namespace, regardless of whether the repo uses Spec Kit. Do not
+The project map lives at `.quality/project-map.yaml` — the consolidated
+`.quality/` namespace, regardless of whether the repo uses Spec Kit. Do not
 keep a second copy at the repo root or under `.specify/`; a single canonical map
 avoids two divergent maps evolving silently.
 
@@ -25,7 +25,7 @@ Maintain this authority model:
 
 ```text
 PRD / roadmap: project intent
-.quality-center/project-map.yaml: project graph and traceability
+.quality/project-map.yaml: project graph and traceability
 TESTING.md: project proof-strategy guidance (dev-owned)
 spec.md: feature truth
 plan.md / tasks.md: execution contract

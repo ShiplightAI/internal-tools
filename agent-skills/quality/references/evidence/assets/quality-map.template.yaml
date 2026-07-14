@@ -70,7 +70,7 @@ expectations:
       # several). A manifest observation source supplies the pass/fail; the
       # test_case here must match the test_case the workflow emits. test_case
       # matching is case-insensitive. The manifest contract lives in the
-      # quality-center skill's observation-sources template.
+      # quality skill's observation-sources template.
       - id: "<check-evidence-id>"
         type: "smoke"
         path: ".github/workflows/<workflow-file>.yml"
