@@ -155,8 +155,9 @@ map (correcting an `evidence.path`, pinning a `test_case`, updating a
 
 Before editing any feature `quality-map.yaml` or authoring emitted
 `test_file`/`test_case` values, read the `evidence` subcommand's Runtime
-Join Contract section and validate map edits against its schema,
-`../evidence/assets/quality-map.schema.json`.
+Join Contract section and validate map edits with
+`npx --yes @shiplightai/quality-tools validate <map-path>` (the engine's own
+validator; `… schema` prints the current contract).
 
 ## Artifact Location
 

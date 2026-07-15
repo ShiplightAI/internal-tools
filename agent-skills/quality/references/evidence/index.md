@@ -100,8 +100,9 @@ under `expectations`. Each should include:
 Keep the map structural: proof definitions, declared priority, and proof gaps
 belong here; run outcomes and derived judgments do not. Preserve stable ids so
 downstream observation and evaluation systems can join on them. Copy
-`assets/quality-map.template.yaml` for new maps and validate against
-`assets/quality-map.schema.json`.
+`assets/quality-map.template.yaml` for new maps and validate with
+`npx --yes @shiplightai/quality-tools validate <map-path>` (the engine's own
+validator; see "Validate" below).
 
 ## Unit Test Evidence
 
@@ -268,8 +269,13 @@ map.
    Record `proof_gap` where proof is missing or weak.
 5. **Set provenance.** Set `structure_provenance` honestly. Surface unratified,
    highest-priority checks for human ratification.
-6. **Validate.** Validate against `assets/quality-map.schema.json`. Keep the map
-   structural — no run outcomes or rollups.
+6. **Validate.** Run `npx --yes @shiplightai/quality-tools validate <map-path>`
+   (requires `@shiplightai/quality-tools` ≥ 0.2.0). It runs the engine's real
+   validator — unknown-field, required-field, duplicate-id, source-ref, and
+   evidence-path checks — and exits non-zero on any error (warnings pass). This
+   is the source of truth for the contract, not a static schema copy; run
+   `npx --yes @shiplightai/quality-tools schema` to print the current JSON Schema
+   for reference. Keep the map structural — no run outcomes or rollups.
 7. **Optional runtime hand-off.** When the user wants observations, hand the
    `.quality/config/*` wiring to the `analyze` subcommand; this
    subcommand's contribution is the map side (evidence `path`/`test_case` and
@@ -277,9 +283,9 @@ map.
 
 ## Artifact Skeletons
 
-| Artifact | Template | Schema |
+| Artifact | Template | Validate |
 | --- | --- | --- |
-| `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `assets/quality-map.schema.json` |
+| `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `npx --yes @shiplightai/quality-tools validate <map>` (`… schema` prints the contract) |
 
 Map-side vocabularies (and what is owned elsewhere) live in
 `_shared/vocabularies.md`. For `test-spec.md` / `test-report.md` see `/shiplight
