@@ -7,6 +7,7 @@
   "required": ["target", "expectations"],
   "properties": {
     "structure_provenance": { "$ref": "#/$defs/structureProvenance" },
+    "checks_reviewed": { "type": "boolean" },
     "target": {
       "type": "object",
       "additionalProperties": false,
@@ -32,6 +33,9 @@
     }
   },
   "$defs": {
+    "gapCategory": {
+      "enum": ["missing", "blocked", "stale", "deferred", "manual-only", "weak", "failing", "unavailable"]
+    },
     "sourceRef": {
       "type": "object",
       "additionalProperties": false,
@@ -72,7 +76,6 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "require_multi_layer": { "type": "boolean" },
         "require_gate": { "type": "boolean" },
         "notes": { "type": "string" }
       }
@@ -113,7 +116,11 @@
           "type": "array",
           "items": { "$ref": "#/$defs/evidence" }
         },
-        "proof_gap": { "$ref": "#/$defs/proofGap" }
+        "proof_gap": { "$ref": "#/$defs/proofGap" },
+        "accepted_gaps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gapCategory" }
+        }
       }
     },
     "evidence": {

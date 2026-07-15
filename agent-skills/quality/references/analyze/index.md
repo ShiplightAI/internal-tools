@@ -96,8 +96,9 @@ What this `analyze` subcommand must hold:
   `evidence` subcommand; this `analyze` subcommand reports and triages it but never authors
   or self-promotes it. `structure_provenance` is only **gate 1** of structure
   confidence; feature `status` and `priority_provenance` in `project-map.yaml`
-  (owned by `project`) are gates 2–3, and the engine joins all three. See
-  `_shared/independence.md` → "Structure confidence: the three ratification gates".
+  (owned by `project`) are gates 2–3, map-level `checks_reviewed` is gate 4, and the
+  engine joins all four. See
+  `_shared/independence.md` → "Structure confidence: the ratification gates".
 
 Split improvement work by which score it raises:
 

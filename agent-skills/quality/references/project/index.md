@@ -162,9 +162,9 @@ side and never blended — the `analyze` subcommand owns the full model.
 This skill owns the feature-level ratification gates that feed **structure
 confidence** — feature `status` (gate 2) and `priority_provenance` (gate 3) — part
 of the human-gated axis no automated command can move. The per-map
-`structure_provenance` (gate 1) is owned by the `evidence` subcommand; the engine
-joins all three. See `_shared/independence.md` → "Structure confidence: the three
-ratification gates".
+`structure_provenance` (gate 1) and map-level `checks_reviewed` (gate 4) are owned by
+the `evidence` subcommand; the engine joins all four. See `_shared/independence.md` →
+"Structure confidence: the ratification gates".
 
 - **Raise structure confidence — this skill's gates.** Construct and *ratify* the
   backbone: propose features, checks, and priorities, then have the owner validate

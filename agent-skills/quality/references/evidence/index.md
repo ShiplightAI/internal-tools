@@ -132,7 +132,8 @@ Choose the value honestly from how the check list was actually produced:
 
 - `spec` — derived from a written spec/PRD/Speckit artifact.
 - `user_authored` — a human defined the checks directly.
-- `agent_generated` — an agent produced the checks and a human reviewed them.
+- `agent_generated` — an agent produced the checks (this records *origin only*; a
+  human's review of the list is a separate gate, `checks_reviewed` — see below).
 - `inferred_brownfield` — reconstructed from existing code/tests after the fact,
   not yet validated against intended requirements.
 - `unspecified` — origin undeclared; the default. Scores 0 and is counted in the
@@ -148,23 +149,43 @@ Rules:
 - Never infer provenance from heuristics (git dates, whether a spec file exists)
   and record it as declared.
 
-Raising structure confidence is a **ratification ladder**, not an agent edit:
-`inferred_brownfield` → `agent_generated` (an agent produced the checks and a
-human reviewed them) → `user_authored` / `spec`. The agent may author at
-`inferred_brownfield` and *propose* checks and priorities, but must not record
-`agent_generated` until a human has reviewed the list, nor `user_authored`/`spec`
-without genuine human authorship or an accepted spec. Surface the unratified
-checks — highest-priority first — for that review. Promotion is the per-feature
-action that raises structure confidence, and it is always human-gated; no test
-and no `fix-prompts` run can raise it. Mapping more proof and stronger types
-raises coverage and evidence confidence, reported beside structure confidence
-and never substituting for it.
+`structure_provenance` is an **origin ladder**, not an agent edit:
+`inferred_brownfield` (0.4) → `agent_generated` (0.7) → `user_authored` / `spec`
+(1.0). The agent may author at `inferred_brownfield` and *propose* checks and
+priorities, but must not record `user_authored`/`spec` without genuine human
+authorship or an accepted spec. Origin is not review — an `agent_generated` list a
+human has *approved* still reads `agent_generated`; the approval is recorded by
+`checks_reviewed` (below), which the engine treats as the review gate.
 
-This map-level `structure_provenance` is **gate 1** of the three ratification
-gates that feed structure confidence; the feature-level gates — feature `status`
-and `priority_provenance` in `project-map.yaml` — are owned by the `project`
-subcommand, and the engine joins all three. See `_shared/independence.md` →
-"Structure confidence: the three ratification gates".
+### `checks_reviewed` — gate 4 (map-level human review)
+
+Set `checks_reviewed: true` at the map level ONLY when a human has reviewed and
+approved the whole check list. Combined with a confirmed feature (gate 2), it lifts
+that feature's checks to **HIGH** structure confidence (1.0), overriding the gate-1
+origin ladder — so a human-approved `agent_generated` list scores HIGH without
+rewriting its origin. It is **human-gated**: surface the unratified checks —
+highest-priority first — for review; *propose* the reviewed list, but never flip
+`checks_reviewed` to true on the owner's behalf. No test and no `fix-prompts` run can
+raise it. (Mapping more proof and stronger types raises coverage and evidence
+confidence, reported beside structure confidence and never substituting for it.)
+
+### `accepted_gaps` — accepted risk (human-gated)
+
+A per-check list of gap **categories** a human has reviewed and accepted as tolerated
+risk: a subset of `missing, blocked, stale, deferred, manual-only, weak, failing,
+unavailable`. An accepted gap stays visible but stops counting as an **open** gap;
+accepting the category that drives the check's status (`missing` / `manual-only` /
+`weak`) also lifts its quality/coverage score, while accepting a state category
+(`blocked`/`stale`/`deferred`/`unavailable`/`failing`) is count-only. It never
+changes evidence confidence. Like the gates, it is **human-gated**: the agent may
+*propose* "accept this as tolerated risk" but must never write `accepted_gaps` for
+the owner. Remove the category to un-accept.
+
+`structure_provenance` is **gate 1** and `checks_reviewed` **gate 4** of the four
+ratification gates that feed structure confidence; the feature-level gates — feature
+`status` and `priority_provenance` in `project-map.yaml` — are owned by the `project`
+subcommand, and the engine joins all four. See `_shared/independence.md` →
+"Structure confidence: the ratification gates".
 
 ## Runtime Join Contract
 
