@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://shiplight.dev/schemas/quality-evidence/quality-map.schema.json",
-  "$comment": "GENERATED from @shiplightai/quality-core/quality-map-schema (buildQualityMapJsonSchema). Do not edit by hand — run `pnpm generate:qc-schema` to regenerate.",
+  "$comment": "GENERATED from @shiplightai/quality-map buildQualityMapJsonSchema(). Do not edit by hand — run `pnpm generate:qc-schema` to regenerate.",
   "title": "Quality Evidence Map",
   "type": "object",
   "additionalProperties": false,
