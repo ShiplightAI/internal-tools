@@ -27,7 +27,10 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
 2. **Rebase on latest base**:
    - `git fetch origin <BASE>`
    - `git rebase origin/<BASE>`
-   - If there are conflicts, **stop and tell the user** — do not attempt to resolve conflicts automatically
+   - If there are conflicts, **resolve them yourself**: read both sides of each conflict, understand what the upstream change and this branch's change each intend, and produce a resolution that preserves both intents. Then `git add` the resolved files and `git rebase --continue` until the rebase completes.
+   - After resolving, **verify the result**: run the repo's build/tests (or at minimum the checks relevant to the conflicted files) before pushing — a syntactically clean resolution can still be semantically wrong.
+   - **Escalate instead of guessing**: if a conflict's correct resolution is genuinely unclear — the two sides make incompatible design choices, the upstream change is large or unfamiliar, or verification fails after your best attempt — run `git rebase --abort` to restore the branch to its pre-rebase state, then **stop and ask the user** for help, describing the conflicting files and what each side is trying to do. Never push a resolution you are unsure about.
+   - This is not a one-time step: **repeat the fetch + rebase immediately before every push in this flow** (steps 3, 6, and 8). Review rounds take minutes and upstream keeps moving — rebasing before each push surfaces conflicts locally instead of at merge time.
 
 3. **Push to remote**: `git push -u origin <branch-name>` (use `--force-with-lease` if the rebase rewrote history)
 
@@ -57,11 +60,11 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
    - **Act on local findings before waiting for the bot** (max 2 local iterations):
      - Fix items labeled **BUG**, **CRITICAL**, or **🔴**
      - Fix trivial **MINOR**/**NIT**/**SUGGESTION** items if cheap
-     - Commit, push, and re-invoke the local skill on the updated HEAD
+     - Commit, rebase on `origin/<BASE>` (step 2), push, and re-invoke the local skill on the updated HEAD
      - Treat each re-invocation as a **fresh** review and reconcile prior findings (Fixed / Still-open / Regressed) before acting — a fix can regress previously-clean code
      - Stop iterating locally once no blocking issues remain or after 2 passes — diminishing returns; the bot will catch what's left
 
-6. **Push any pre-review fixes** to the PR branch (if step 5 made changes). The PR auto-updates; the bot picks up the latest HEAD.
+6. **Push any pre-review fixes** to the PR branch (if step 5 made changes), rebasing on `origin/<BASE>` first (step 2). The PR auto-updates; the bot picks up the latest HEAD.
 
 7. **Wait for Claude bot review** (required if the bot is installed in this repo):
    - The Claude bot posts as an **issue comment** (not a PR review)
@@ -76,7 +79,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
    - **Always read the full review text** — do NOT just check the `claude-review` check status. A check may pass even when the review lists BUG or critical issues that should be fixed.
    - Look for items labeled **BUG**, **CRITICAL**, or **🔴** in the review body — these must be fixed before merging
    - Items labeled **MINOR**, **NIT**, **SUGGESTION**, or **LOGIC LOOKS CORRECT** are informational and do not block merging, but fix them if the fix is trivial
-   - For each blocking issue: fix it, commit, push, and wait for the bot to post a new review (the old review will be superseded)
+   - For each blocking issue: fix it, commit, rebase on `origin/<BASE>` (step 2), push, and wait for the bot to post a new review (the old review will be superseded)
    - Optionally re-run the local pre-review (step 5) on the updated diff to validate fixes before waiting on the bot again — speeds up iteration (treat each re-run as a fresh review that reconciles prior findings)
    - Repeat until no blocking issues remain or 3 iterations are exhausted
    - If still blocking after 3 iterations, **stop and tell the user**
@@ -84,6 +87,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
 9. **Merge**:
    - Verify all required checks pass: `gh pr checks <PR_NUMBER>`
    - Merge with: `gh pr merge <PR_NUMBER> --rebase`
+   - If the merge fails because the branch is behind `<BASE>`, redo the fetch + rebase from step 2, push with `--force-with-lease`, wait for checks, and retry the merge once
    - If merge fails due to branch protections, inform the user
    - Return the merged PR URL
 
@@ -97,6 +101,7 @@ Store this as `<BASE>` and use it for the rest of the run. Mention which source 
 ## Important
 
 - The base branch is resolved once at the start (see "Resolving the base branch") — use the resolved `<BASE>` consistently for `git fetch`, `git rebase`, `gh pr create --base`, and the diff/log commands. Never assume `main` or `staging`.
+- **Every push must be preceded by a fresh `git fetch origin <BASE>` + `git rebase origin/<BASE>`** — not just the first one. After a rebase that rewrote history, push with `--force-with-lease` (never plain `--force`). Resolve rebase conflicts yourself and verify before pushing; if a resolution is genuinely unclear, `git rebase --abort` and ask the user, per step 2.
 - Use `repos/{owner}/{repo}` placeholders in `gh api` calls — `gh` substitutes the current repo, so the skill works in any repo without hardcoding the owner/name.
 - Do not add Co-Authored-By or generation metadata to commits
 - The local `/code-review:code-review` skill is a pre-pass to reduce GHA round-trips — it does NOT replace the bot review; the bot review in step 7 is required before merge **when the bot is installed**. If the bot never posts, ask the user before merging without it.
