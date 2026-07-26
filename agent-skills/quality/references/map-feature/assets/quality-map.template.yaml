@@ -25,7 +25,7 @@ target:
 expectations:
   - id: "<stable-expectation-id>"
     title: "<Behavior, invariant, workflow, or operational promise>"
-    description: "<Short product-language quality check>"
+    description: "<Short user-facing quality check>"
     source_type: "SOURCE" # SOURCE | IMPLEMENTATION | INFERRED
     # Optional: override the map-level structure_provenance for THIS check only,
     # e.g. one hand-verified check in an otherwise inferred_brownfield map.

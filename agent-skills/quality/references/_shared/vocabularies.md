@@ -13,12 +13,12 @@ is the derived evidence-confidence score beside the runtime quality score.
 
 `source_type` (`SOURCE` / `IMPLEMENTATION` / `INFERRED`) and
 `structure_provenance` (`spec` / `user_authored` / `agent_generated` /
-`inferred_brownfield` / `unspecified`) are defined in the `evidence` subcommand,
+`inferred_brownfield` / `unspecified`) are defined by `map-feature`,
 since they are discussed in context with their authoring rules. `structure_provenance`
 also vouches for the declared `priority` on each check.
 
 The session/result vocabularies (test type, result status, coverage status) are
-authored by `/shiplight cover` into `test-report.md`. The `evidence` subcommand
+authored by `/shiplight cover` into `test-report.md`. `map-feature`
 reads them when constructing the map but does not author them.
 
 ## Runtime analysis — owned by tooling, never authored

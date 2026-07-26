@@ -18,11 +18,11 @@ profiles:
       repo: "org/repo"
       workflow: "publish.yml"
       artifact_names:
-        - "qc-observations-*"
+        - "quality-observations-*"
       # branch: "main" # Optional narrow filter
 
     # local_folder:
-    #   path: "artifacts/qc"
+    #   path: "artifacts/quality"
 
     adapters:
       - id: "browser-junit"
@@ -62,7 +62,7 @@ profiles:
 # - One profile per source integration; profiles only declare where results come from.
 # - artifact_path is optional for manifests, but choose deliberately:
 #     * omit it only when the artifact is DEDICATED to observations (JSON-only,
-#       e.g. a qc-* bundle) — every JSON file is then read as a manifest;
+#       e.g. a quality-observations-* bundle) — every JSON file is then read as a manifest;
 #     * set it when the source also holds other JSON (Playwright reports, release
 #       records, etc.). The reader tries every .json; non-manifest JSON never
 #       becomes a false observation, but it yields diagnostics and a "partial"

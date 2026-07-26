@@ -1,39 +1,49 @@
-# evidence — Build/maintain a feature's quality map
+# map-feature — Map one feature's checks and proof
 
-The `evidence` subcommand of the `/quality` router. Constructs and maintains one
-feature's quality map (`quality-map.yaml`) from existing artifacts so the
-`quality-tools` engine can score coverage, evidence confidence, and structure
-confidence.
+`map-feature <target>` constructs or improves one feature's section of the
+quality graph:
+
+```text
+feature → quality checks → proof definitions
+```
+
+It writes the feature's `quality-map.yaml` from accepted requirements and
+existing proof artifacts so the engine can score coverage, evidence confidence,
+and structure confidence.
+
+## Contents
+
+- Boundaries, inputs, and graph artifact
+- Check and proof authoring rules
+- Structure provenance and human gates
+- Runtime join contract
+- Workflow, validation, and edit boundaries
 
 ## Read first
 
-- `_shared/independence.md`
-- `_shared/layout.md`
-- `_shared/vocabularies.md`
+- [independence](../_shared/independence.md)
+- [layout](../_shared/layout.md)
+- [vocabularies](../_shared/vocabularies.md)
 
-Quality-map construction for one feature, spec, module, PR, or ticket at a
-time. Use when the user wants a trustworthy `quality-map.yaml` for a feature —
-the right set of quality checks, each with its declared priority, its proof
-mapped as evidence, honest structure provenance, and concrete proof gaps — so
-the `quality-tools` engine can score coverage, evidence confidence, and structure
-confidence.
+Work on one feature, spec, module, PR, or ticket at a time. The outcome is a
+trustworthy answer to two questions: what must hold for this feature, and what
+existing artifact proves each check?
 
-This is the `evidence` subcommand of the `/quality` skill. It reads facts and
-constructs the map; it does not generate them:
+`map-feature` reads proof facts and connects them to the graph; it does not
+generate the proof:
 
 - It does **not** create tests or pick testing strategy — that is `/shiplight
-  cover`. This subcommand reads the test-spec, the test-report, and the actual
+  cover`. This command reads the test-spec, the test-report, and the actual
   test files and indexes what exists.
-- It does **not** wire observations, observation sets, saved views, or run
-  `@shiplightai/quality-tools analyze` — that is the `analyze` subcommand.
-- It does **not** author `.quality/project-map.yaml` — that is the
-  `project` subcommand.
+- It does **not** wire observations, observation sets, or saved views—that is
+  `improve`; it does not run the engine—that is `assess`.
+- It does **not** author `.quality/project-map.yaml`—that is `map-project`.
 
 Project-wide quality improvement across many feature maps belongs to the
-`analyze` subcommand. When the request is about overall project quality rather
-than one feature's map, use that mode.
+`improve` command. When the request is about overall project quality rather
+than one feature's graph, use that command.
 
-## What This Skill Constructs
+## Graph layer and artifact
 
 Per target, at `.quality/evidence/<target-slug>/quality-map.yaml`: the structural
 proof-definition graph — the quality checks (`expectations`), each carrying a
@@ -43,9 +53,9 @@ freshness, or confidence rollups (those are observations/evaluations).
 
 It does **not** author `test-spec.md` / `test-report.md` (owned by
 `/shiplight cover`, in `specs/<feature>/`), the dev-owned testing strategy
-(`TESTING.md`), `.quality/project-map.yaml` (owned by the `project`
-subcommand), or `.quality/config/*` and `.quality/generated/*`
-(owned by the `analyze` subcommand).
+(`TESTING.md`), `.quality/project-map.yaml` (owned by `map-project`), or
+`.quality/config/*` and `.quality/generated/*` (owned by `improve` and the
+engine).
 
 ## Inputs, Facts, And Independence
 
@@ -87,7 +97,7 @@ never to host project-wide or multi-feature work. Preserve old slugs under
 Maintain `quality-map.yaml` around quality checks, not test files. Checks live
 under `expectations`. Each should include:
 
-- Stable check id and title (product language).
+- Stable check id and title (user-facing language).
 - Source type: `SOURCE`, `IMPLEMENTATION`, or `INFERRED`.
 - Source references to specs, PRDs, issues, code, docs, or user input.
 - Category and `priority` (read as a fact from the declaring artifact).
@@ -113,7 +123,7 @@ external state, integration behavior, or user workflow. Examples include pure
 parsing or formatting rules, schema validation, deterministic serialization,
 local routing decisions, and narrow safety guards.
 
-For product-facing workflows or boundary-spanning claims, unit tests may support
+For user-facing workflows or boundary-spanning claims, unit tests may support
 the check but should not close it alone. This includes, but is not limited to,
 claims whose correctness depends on integration between components, user or
 runtime state, external systems, persistence, permissions, transport/protocol
@@ -149,6 +159,10 @@ Rules:
   the structure is trustworthy.
 - Never infer provenance from heuristics (git dates, whether a spec file exists)
   and record it as declared.
+- Reconcile the field with the map's own source references and comments. For
+  example, a map described as reconstructed from implementation cannot also
+  claim `user_authored`; human review belongs in `checks_reviewed` and never
+  rewrites the origin.
 
 `structure_provenance` is an **origin ladder**, not an agent edit:
 `inferred_brownfield` (0.4) → `agent_generated` (0.7) → `user_authored` / `spec`
@@ -184,14 +198,15 @@ the owner. Remove the category to un-accept.
 
 `structure_provenance` is **gate 1** and `checks_reviewed` **gate 4** of the four
 ratification gates that feed structure confidence; the feature-level gates — feature
-`status` and `priority_provenance` in `project-map.yaml` — are owned by the `project`
-subcommand, and the engine joins all four. See `_shared/independence.md` →
+`status` and `priority_provenance` in `project-map.yaml`—are owned by
+`map-project`, and the engine joins all four. See
+[`independence.md`](../_shared/independence.md) →
 "Structure confidence: the ratification gates".
 
 ## Runtime Join Contract
 
-The canonical interface between feature quality maps and observations. The
-`analyze` subcommand's observation adapters consume it; evidence authored here
+The canonical interface between feature quality maps and observations.
+`improve` configures adapters that consume it; evidence authored here
 must honor it:
 
 - `evidence.path` is the canonical proof-source identity. Prefer stable
@@ -213,16 +228,16 @@ file that wires the gate and `test_case` to the unit being proven (the workflow
 step, or a finer check name). Choose a schema-valid evidence `type` and validate.
 When no parseable report exists yet, record the missing runtime backing as a
 `proof_gap` — a legitimate gap, not an error — and hand the workflow-emit step
-and observation source to the `analyze` subcommand. Do not record run outcomes
+and observation source to `improve`. Do not record run outcomes
 in the map.
 
-## Product-Language Check Writing
+## User-facing check writing
 
-Dashboards render `title`, `description`, `proof_gap.summary`, and
-`proof_gap.next_step` directly, so write those as product-language summaries.
+Readers may present `title`, `description`, `proof_gap.summary`, and
+`proof_gap.next_step` directly, so write them as user-facing summaries.
 Use the schema; do not add free-form keys.
 
-- `title`: name the product behavior or quality promise the check proves — not a
+- `title`: name the project behavior or quality promise the check proves—not a
   command, artifact, or test file.
 - `description`: explain what the check proves and which feature behavior or
   release confidence it affects.
@@ -231,33 +246,15 @@ Use the schema; do not add free-form keys.
 - `proof_gap.next_step`: the highest-value proof to add next, or omit `proof_gap`
   if there is no open gap.
 
-Keep `SOURCE` product promises, `IMPLEMENTATION`-observed checks, and `INFERRED`
+Keep `SOURCE` accepted promises, `IMPLEMENTATION`-observed checks, and `INFERRED`
 checks visibly distinct in title and description. Keep any documentation-baseline
 check compact and secondary — do not let it carry the feature's coverage story.
-
-## Generate Fix Prompts
-
-Invocation shortcut: `fix-prompts`. Interpret `evidence fix-prompts` as:
-
-```bash
-npx @shiplightai/quality-tools fix-prompts \
-  --project-path <repo-root> \
-  --target <target-id> \
-  --output .quality/fix-prompts.md
-```
-
-Accept script-style options after the shortcut (e.g. `--target 026-... --limit
-10`). Use the package command; do not write a custom generator. Repo-wide
-fix-prompt generation across all maps is documented in the `analyze` subcommand.
-Fix-prompts that require *creating* tests are executed by `/shiplight cover`
-and the producers; this subcommand records the resulting evidence back into the
-map.
 
 ## Workflow
 
 1. **Resolve target.** A single feature/spec slug. If the request has no single
-   target ("improve quality across the repo", "act on recommendations"), hand
-   off to the `analyze` subcommand.
+   target ("improve quality across the repo", "act on recommendations"), use
+   `improve`.
 2. **Gather inputs.** Read `test-spec.md`, `test-report.md`, the test files,
    code, CI config, and the PRD/spec for declared priorities. Record what was
    found and what was missing.
@@ -276,10 +273,9 @@ map.
    is the source of truth for the contract, not a static schema copy; run
    `npx --yes @shiplightai/quality-tools schema` to print the current JSON Schema
    for reference. Keep the map structural — no run outcomes or rollups.
-7. **Optional runtime hand-off.** When the user wants observations, hand the
-   `.quality/config/*` wiring to the `analyze` subcommand; this
-   subcommand's contribution is the map side (evidence `path`/`test_case` and
-   proof gaps).
+7. **Optional runtime hand-off.** When the user wants runtime results connected,
+   use `improve` for `.quality/config/*`, then `assess`. This command contributes
+   the map side: evidence `path`/`test_case` and proof gaps.
 
 ## Artifact Skeletons
 
@@ -287,19 +283,18 @@ map.
 | --- | --- | --- |
 | `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `npx --yes @shiplightai/quality-tools validate <map>` (`… schema` prints the contract) |
 
-Map-side vocabularies (and what is owned elsewhere) live in
+Map-side vocabularies and ownership live in
 `_shared/vocabularies.md`. For `test-spec.md` / `test-report.md` see `/shiplight
-cover`; for `.quality/config/*` see the `analyze` subcommand.
+cover`; for `.quality/config/*` see `improve`.
 
 ## Operating Rules
 
-- Constructs and edits `.quality/evidence/**` only (the `analyze`
-  subcommand may also apply contract-conformant join-key/`proof_gap` fixes there).
+- Constructs and edits `.quality/evidence/**` only (`improve` may also apply
+  contract-conformant join-key/`proof_gap` fixes there).
   Does not create tests,
   author `test-spec.md`/`test-report.md` (dev-owned, in `specs/<feature>/`),
   author `.quality/project-map.yaml`, or touch the rest of
-  `.quality/**` (config and generated output, owned by the `analyze`
-  subcommand).
+  `.quality/**` (config and generated output, owned by `improve` and the engine).
 - Never author `depth`, `reliability`, a risk weight, or a `HIGH/MEDIUM/LOW`
   verdict; `priority` and evidence `type` are read/confirmed facts (see Inputs,
   Facts, And Independence), never invented.
@@ -312,9 +307,10 @@ cover`; for `.quality/config/*` see the `analyze` subcommand.
 
 - When the user wants tests created or a testing strategy chosen: use
   `/shiplight cover`.
-- When the user wants project-wide quality, runtime-review wiring, evaluation
-  sets, saved views, or recommendation-driven work: use the `analyze`
-  subcommand.
+- When the user wants project-wide improvement, runtime wiring, observation
+  sets, saved views, or recommendation-driven work: use `improve`.
+- When the user wants the current scores refreshed without source changes: use
+  `assess`.
 - When the user wants project orchestration or a project map: use
-  `speckit-project` (dev) or the `project` subcommand (index).
+  the relevant development workflow (dev) or `map-project` (quality graph).
 - When the user only wants a code review with no index construction.

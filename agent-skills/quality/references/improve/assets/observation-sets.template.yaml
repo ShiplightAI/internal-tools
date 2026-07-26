@@ -1,14 +1,14 @@
 observation_sets:
   - id: "example-review"
     name: "Example review"
-    description: "Bundle saved observation source profiles into one shared observation set."
+    description: "Bundle runtime-result source profiles used in one assessment."
     profiles:
       - profile_id: "example-workflow"
       - profile_id: "example-secondary-workflow"
 
 # Authoring notes:
-# - One observation set per shared review unit.
+# - One observation set per reusable runtime-source bundle.
 # - A set can contain one profile or many profiles.
 # - Use a single-profile set when you want to debug one source in isolation.
-# - Profile order is the saved review order.
-# - Scope filtering happens later at the project or saved-view level.
+# - Profile order is precedence order.
+# - Feature filtering happens separately through whole-project or saved-view scope.

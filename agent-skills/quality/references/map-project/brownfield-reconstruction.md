@@ -1,11 +1,18 @@
 # Brownfield Reconstruction
 
-Use this workflow when a repository did not previously use Spec Kit, or when
-the existing product/spec history is incomplete.
+Use this workflow when accepted intent or feature history is incomplete.
+
+## Contents
+
+- Principle and operating posture
+- Discovery sources
+- Reconstruction steps
+- Candidate review prompt
+- Safety rules
 
 ## Principle
 
-Existing code is observed behavior, not automatically product truth. The goal is
+Existing code is observed behavior, not automatically intended behavior. The goal is
 to build a provisional project graph, then ask the user to ratify it before
 turning observations into authoritative specs.
 
@@ -23,11 +30,10 @@ Brownfield works best as a collaboration, not autonomous reconstruction:
 - **Agent ingests**: reads docs, code, tests, and trackers; proposes candidate
   features; maps evidence; surfaces conflicts and open questions.
 
-This runs **without Spec Kit installed**. Produce the provisional project map and
-an initial `evidence` pass first; install and `specify init` (via
-`speckit-project`) only after the user decides to adopt Spec Kit. evidence
-is the recommended cold-start entry point because it runs standalone on existing
-code and tests.
+This runs **without Spec Kit installed**. Use `start` to explain and orchestrate
+the sequence: create the provisional project map first, then run `map-feature`
+for the user-selected priority feature. Install and `specify init` through the
+relevant development workflow only after the user decides to adopt Spec Kit.
 
 ## Discovery Sources
 
@@ -52,7 +58,7 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
 1. **Gather user-named sources and priority, then inventory**
    - Ask the user for intent sources (PRD/design-doc paths, tracker pointers) and
      the highest-value or highest-risk area to assess first.
-   - Identify product names, actors, jobs, workflows, domains, and integration
+   - Identify project/service/package names, actors, jobs, workflows, domains, and integration
      boundaries from those sources plus runtime surfaces.
 
 2. **Group candidate features**
@@ -76,7 +82,7 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
 
 5. **Create provisional project map**
    - Write it to `.quality/project-map.yaml`.
-   - Include product-language project, release area, and feature summaries plus
+   - Include a user-facing project boundary and feature summaries plus intent
      docs, code refs, test refs, open questions, and orphan areas.
 
 6. **Ask for ratification**
@@ -94,14 +100,14 @@ Prefer `rg` and targeted file reads. Avoid broad context dumps.
      history.
 
 8. **Connect evidence**
-   - Map existing tests to feature expectations through `evidence`.
+   - Map existing tests to feature expectations through `map-feature`.
    - Mark missing evidence and residual risk instead of overclaiming.
 
 ## Candidate Feature Notes
 
 For each candidate, capture:
 
-- product goal or workflow promise
+- user-facing goal or workflow promise
 - observed routes/APIs/components/jobs
 - data models or external systems
 - existing tests
@@ -123,7 +129,7 @@ Open question: Are SSO and password login both current requirements?
 
 002-billing-dashboard: INFERRED
 Evidence: billing route and fixtures, no tests
-Open question: Is this an active product area or legacy admin-only UI?
+Open question: Is this an active project capability or legacy admin-only UI?
 ```
 
 Ask one to three focused questions at a time. Put the question first, then the

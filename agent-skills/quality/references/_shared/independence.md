@@ -9,15 +9,15 @@ software do what it should, and is it correct, with justified confidence?
 
 Quality answers that only if its judgment is independent of whatever produced the
 code and the tests. That independence is engineered, not assumed, and it is the
-reason Quality is a **separate skill at a higher altitude** than the evidence
-producers — never a subcommand of them.
+reason Quality is a **separate skill at a higher altitude** than the proof
+producers—never one of their commands.
 
 ## The four enforcement mechanisms (never weaken these)
 
 1. **One-directional artifact flow.** Producers emit facts (`test-spec.md`,
    `test-report.md`, test code, run results); Quality reads/indexes/scores them.
    Quality **never authors a test** or edits a producer artifact. Producers never
-   write a backbone YAML or touch `.quality/`.
+   write quality-graph source or touch `.quality/`.
 2. **The engine scores, never the LLM.** The four scores are computed by the
    deterministic `quality-tools` engine from declared facts + runtime observations
    + human ratification — never an agent's opinion. Never blend, optimize, or
@@ -42,14 +42,14 @@ the current rubric, not a target to optimize toward or reverse-engineer.
 
 | Gate | Field | Artifact / owner | What it ratifies |
 | --- | --- | --- | --- |
-| 1 | `structure_provenance` | `quality-map.yaml` / `evidence` | the check list *and its priorities* **originated** from a trusted source — `spec`/`user_authored` = 1.0, `agent_generated` = 0.7, `inferred_brownfield` = 0.4, `unspecified` = 0 (counted, earns no trust). This is *origin*, not review — review is gate 4 and never overwrites it |
-| 2 | feature `status` | `project-map.yaml` / `project` | the feature is real product truth — a `candidate` (agent-proposed, unratified) feature soft-caps its checks' structure confidence at 0.7 until a human ratifies it (e.g. `active`) |
-| 3 | `priority_provenance` | `project-map.yaml` / `project` | the declared priority is human-set (`human`) rather than agent-guessed (`agent`); the agent must not overwrite a human-set priority on rebuild |
-| 4 | `checks_reviewed` | `quality-map.yaml` / `evidence` | a human reviewed and **approved the whole check list**. Combined with a confirmed feature (gate 2), it lifts that feature's checks to HIGH structure confidence (1.0), overriding the gate-1 provenance ladder. Orthogonal to `structure_provenance` (origin) — `agent_generated` means "an agent produced the checks," *not* "a human reviewed them"; that is what this gate records |
+| 1 | `structure_provenance` | `quality-map.yaml` / `map-feature` | the check list *and its priorities* **originated** from a trusted source — `spec`/`user_authored` = 1.0, `agent_generated` = 0.7, `inferred_brownfield` = 0.4, `unspecified` = 0 (counted, earns no trust). This is *origin*, not review — review is gate 4 and never overwrites it |
+| 2 | feature `status` | `project-map.yaml` / `map-project` | the feature is accepted project structure—a `candidate` (agent-proposed, unratified) feature soft-caps its checks' structure confidence at 0.7 until a human ratifies it by assigning the accurate lifecycle status, such as `planned`, `specified`, or `implemented` |
+| 3 | `priority_provenance` | `project-map.yaml` / `map-project` | the declared priority is human-set (`human`) rather than agent-guessed (`agent`); the agent must not overwrite a human-set priority on rebuild |
+| 4 | `checks_reviewed` | `quality-map.yaml` / `map-feature` | a human reviewed and **approved the whole check list**. Combined with a confirmed feature (gate 2), it lifts that feature's checks to HIGH structure confidence (1.0), overriding the gate-1 provenance ladder. Orthogonal to `structure_provenance` (origin) — `agent_generated` means "an agent produced the checks," *not* "a human reviewed them"; that is what this gate records |
 
-`evidence` owns gates 1 & 4; `project` owns gates 2–3. When either subcommand says it
-"owns structure confidence," it means *its* gate(s) — the score is the engine's
-join of all four and is never owned end-to-end by one subcommand. An agent may
+`map-feature` owns gates 1 and 4; `map-project` owns gates 2–3. When either
+command says it "owns structure confidence," it means *its* gates—the score is
+the engine's join of all four and is never owned end-to-end by one command. An agent may
 construct at the untrusted end of every gate (`inferred_brownfield`, `candidate`,
 `agent`, `checks_reviewed: false`) and propose, but must never self-advance any gate
 on the owner's behalf — including flipping `checks_reviewed` to true or accepting a

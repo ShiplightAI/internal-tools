@@ -5,18 +5,13 @@ Private Shiplight agent assets for internal development workflows.
 This repository intentionally contains internal-only skills and prompts. Public
 Shiplight agent skills remain in `ShiplightAI/agent-skills`.
 
-> **The quality skill suite moved out.** `quality-project`, `quality-evidence`,
-> and `quality-center` — plus the `ARCHITECTURE.md` / `POSITION.md` design docs
-> and the prompt playbook — now live in the Quality Center product repo under
-> `quality-center-vesuvius/agent-skills/`. This repo keeps the
-> development-workflow skills below.
-
 ## Included Assets
 
 | Asset | Purpose |
 | --- | --- |
 | `auto-pr` | Create a PR against the repo's base branch (arg › CLAUDE.md › repo default), run pre-review, wait for Claude bot review, address blockers, and merge. |
 | `code-review-run` | Run a standalone, medium-effort `/code-review` (in-session or headless), optionally save a ranked round-N report, and reconcile findings across multi-round reviews. |
+| `quality` | Construct, assess, and improve a repository's quality project graph and four-score quality index. |
 | `shell-agent` | Experimental `??` helper for launching provider-native agents from bash/zsh. |
 
 ## Install

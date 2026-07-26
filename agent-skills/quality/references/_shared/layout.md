@@ -1,17 +1,17 @@
 # Shared: The `.quality/` layout & ownership
 
-All quality artifacts live under `.quality/` at the repo root,
-separate from the producers' `specs/` + `tests/` + `.shiplight/`. Per-artifact
-ownership and the edit contract:
+All quality-graph **source** artifacts live under `.quality/` at the repo root.
+The tests, reports, workflows, telemetry, and other proof they reference remain
+in their owning locations. Per-artifact ownership and the edit contract:
 
 ```text
 .quality/
-├── project-map.yaml                         owned by `project`  (features, release areas)
-├── evidence/<target-slug>/quality-map.yaml  owned by `evidence` (per-feature proof graph)
+├── project-map.yaml                         owned by `map-project` (project and features)
+├── evidence/<target-slug>/quality-map.yaml  owned by `map-feature` (per-feature checks and proof)
 ├── config/
-│   ├── observation-sources.yaml             owned by `analyze`
-│   ├── observation-sets.yaml                owned by `analyze`
-│   └── views.yaml                           owned by `analyze`
+│   ├── observation-sources.yaml             owned by `improve`
+│   ├── observation-sets.yaml                owned by `improve`
+│   └── views.yaml                           owned by `improve` (saved feature scopes)
 ├── fix-prompts.md                           TOOL OUTPUT — read-only, never hand-edit
 └── generated/
     └── recommendations/<set>--<scope>.json  TOOL OUTPUT — read-only, never hand-edit
@@ -19,11 +19,11 @@ ownership and the edit contract:
 
 Rules:
 
-- Each subcommand owns its own tree above and must not author another's — with
-  one carve-out: the `analyze` subcommand may apply contract-conformant join-key
+- Each command owns its own tree above and must not author another's—with one
+  carve-out: `improve` may apply contract-conformant join-key
   and `proof_gap` fixes (`evidence.path`, `evidence.test_case`, `proof_gap`) to
-  `evidence/**/quality-map.yaml`, following the `evidence` map contract and never
-  authoring checks or structure (see the `analyze` Operating Rules).
+  `evidence/**/quality-map.yaml`, following the `map-feature` contract and never
+  authoring checks or structure (see the `improve` edit boundaries).
 - `fix-prompts.md` and `generated/*` are written by `quality-tools` only — treat
   them as read-only.
 - Quality reads, but never writes, the **producer** artifacts it indexes:

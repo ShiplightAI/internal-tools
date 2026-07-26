@@ -2,36 +2,26 @@
 project:
   id: "<project-slug>"
   name: "<Project Name>"
-  summary: "<Product-language project summary>"
+  summary: "<User-facing project purpose and assessment boundary>"
   # Reference to the dev-owned proof-strategy artifact, when one exists.
   quality_policy_path: "TESTING.md"
   source_refs:
     - path: "README.md"
       label: "Project README"
     - path: "docs/prd.md"
-      label: "Product requirements"
+      label: "Accepted project requirements"
     - path: "docs/feature-breakdown.md"
       label: "Feature breakdown"
 
-product_docs:
+intent_docs:
   - id: "prd"
     path: "docs/prd.md"
-    role: "product_requirements"
+    role: "accepted_requirements"
     status: "current"
   - id: "feature-breakdown"
     path: "docs/feature-breakdown.md"
-    role: "roadmap"
+    role: "feature_catalog"
     status: "current"
-
-roadmap:
-  current_milestone: "MVP"
-  release_areas:
-    - id: "mvp"
-      name: "Minimum viable product"
-      description: "<Product capability, workflow, or outcome this release area covers>"
-      feature_ids: []
-      exit_criteria: []
-  feature_order: []
 
 active_feature:
   id: null
@@ -43,8 +33,8 @@ active_feature:
 features:
   - id: "001-example-feature"
     name: "Example Feature"
-    description: "<Product-language feature promise or workflow>"
-    status: "candidate" # gate 2 ratification: candidate (agent-proposed) until a human ratifies (e.g. active). An unratified feature soft-caps its checks' structure confidence at 0.7.
+    description: "<User-facing feature promise or workflow>"
+    status: "candidate" # gate 2: keep candidate while agent-proposed. After human ratification, use the accurate lifecycle status, such as planned, specified, or implemented.
     priority: "P1"
     priority_provenance: "agent" # gate 3: agent | human. Set to human once a person sets/adjusts priority; the agent must not overwrite a human-set priority on rebuild.
     source_type: "INFERRED"
@@ -70,7 +60,7 @@ cross_feature_concerns:
     status: "open"
     feature_ids: []
     source_refs: []
-    notes: "<Product-language concern summary>"
+    notes: "<User-facing concern summary>"
 
 discovery:
   mode: "greenfield"
