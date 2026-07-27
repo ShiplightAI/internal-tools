@@ -46,7 +46,7 @@ a release candidate.
 Separate acquisition from graph resolution:
 
 - `runtime_review.execution_status` and `profiles[]`: whether result sources
-  were acquired and parsed
+  were acquired and validated
 - `runtime_review.resolution_status`: whether observations joined to mapped proof
 - `execution_diagnostics`: source, credential, artifact, or canonical-format
   problems

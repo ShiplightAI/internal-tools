@@ -60,7 +60,7 @@ reference:
 | --- | --- | --- |
 | Project → features | `.quality/project-map.yaml` | Project identity, feature boundaries, priorities, status, and dependencies |
 | Feature → checks → proof | `.quality/evidence/<feature>/quality-map.yaml` | What must hold for one feature and which tests, workflows, telemetry, static checks, or manual records prove it |
-| Proof → runtime sources | `.quality/config/observation-sources.yaml` | Where machine-readable results come from |
+| Proof → runtime sources | `.quality/config/observation-sources.yaml` | Where canonical observation files come from |
 | Runtime source bundles | `.quality/config/observation-sets.yaml` | Which runtime sources are assessed together |
 | Saved assessment scopes | `.quality/config/views.yaml` | Which project-map features are included together |
 | Actual proof | Files referenced by `evidence.path` | Tests, workflows, reports, runbooks, telemetry, or other auditable proof |
@@ -112,6 +112,19 @@ artifact names:
 
 `/quality start` orchestrates steps 1–5 for a new or unmapped repository. The
 more specific commands let an experienced user enter at any stage.
+
+## Producer edit boundary
+
+Quality never authors tests, edits producer-owned reports, or changes the logic
+that determines a result.
+When explicitly authorized, Quality may add only mechanical workflow glue that
+serializes and uploads an already-determined result as canonical
+`quality-observations.json`. It must not manufacture or reinterpret a status or
+change test commands, gates, retries, or failure semantics.
+
+Without explicit authorization, propose the exact emit/upload change and record
+the observation gap without editing the producer. Follow
+[independence](references/_shared/independence.md) for the complete boundary.
 
 ## Tool version gate
 
@@ -189,4 +202,5 @@ Quality maps and judges existing proof. It may hand a concrete proof gap to a
 producer such as `/shiplight cover`, `/shiplight create-yaml-tests`, or
 `/shiplight create-agent-verification`. Producers create or run tests and other
 proof; Quality confirms the resulting artifact, connects it to the graph, and
-remeasures. Quality never authors tests or edits producer-owned reports.
+remeasures. The only producer-side exception is the explicitly authorized
+mechanical workflow glue defined above.

@@ -94,8 +94,8 @@ Classify each gap before editing:
    the required execution context/gate.
 4. **Source acquisition:** credentials, repository/workflow selection, artifact
    names, or local-folder path prevent results from loading.
-5. **Artifact emission:** the workflow emits no machine-readable result or emits
-   the wrong file.
+5. **Artifact emission:** the workflow emits no canonical observation file or
+   emits it at the wrong path.
 6. **Producer format:** the canonical file has an invalid version, envelope,
    status, timestamp, revision, or duplicate observation identity.
 7. **Graph join:** results load but `path`/`test_case` do not match
@@ -105,10 +105,10 @@ Classify each gap before editing:
 9. **Scope:** the observation set contains the wrong profiles or the saved view
    contains the wrong features.
 
-Use `runtime_review.execution_diagnostics` for acquisition/parser problems and
-`runtime_review.resolution_diagnostics` plus `resolution_audit` for graph-join
-problems. Do not call an unobserved check a missing test until acquisition and
-resolution have been ruled out.
+Use `runtime_review.execution_diagnostics` for acquisition or canonical-format
+problems and `runtime_review.resolution_diagnostics` plus `resolution_audit` for
+graph-join problems. Do not call an unobserved check a missing test until
+acquisition and resolution have been ruled out.
 
 ### 3. Apply the smallest honest improvement
 
@@ -178,8 +178,9 @@ resolution have been ruled out.
     <quality-observations.json>
   ```
 
-- Observation config: compare with the schemas in `assets/`, then run the
-  relevant assessment. Engine diagnostics verify acquisition and graph joins.
+- Observation config: compare with the configuration schemas in `assets/`, then
+  run the relevant assessment. Engine diagnostics verify acquisition and graph
+  joins.
 - Implementation/proof changes: run their owning verification command before
   reassessment.
 
@@ -206,7 +207,9 @@ or requires a human decision.
 - `.quality/config/observation-sets.yaml`
 - `.quality/config/views.yaml`
 
-Use the templates and schemas under `assets/`.
+Use the configuration templates and schemas under `assets/`. Use
+`quality-observations.template.json` as the canonical output example; obtain its
+current schema from `quality-tools observations schema`, not a bundled copy.
 
 ### Sources
 
@@ -298,13 +301,14 @@ Follow this sequence. Do not ask the user to choose a parser or config shape.
        --path <evidence.path> \
        --test-case <optional-evidence.test_case> \
        --status <pass|fail|error|skipped> \
-       --output <shard.json>
+       --output quality-observations.json
      ```
 
      Omit `--test-case` when the evidence row is file-level rather than pinned
      to a named case.
 
-   - When several commands produce shards:
+   - When several converters or record commands contribute observations, write
+     each command to a separate shard and merge them:
 
      ```bash
      npx --yes @shiplightai/quality-tools@^0.3.0 observations merge \

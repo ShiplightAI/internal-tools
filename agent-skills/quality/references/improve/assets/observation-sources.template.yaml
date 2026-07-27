@@ -23,10 +23,9 @@ profiles:
       # branch: "main"
 
     # For a local source:
-    # - set transport to local-folder
+    # - change `transport` above to `"local-folder"`
     # - remove both `auth` and `github`
-    # - add:
-    # transport: "local-folder"
+    # - add this block:
     # local_folder:
     #   path: "artifacts/quality"
 
