@@ -80,10 +80,10 @@ expectations:
       # Smoke / health check that runs in CI but is not a test file. Point `path`
       # at the workflow file so a reviewer can open it, and pin `test_case` to the
       # unit being proven (a step name, or a finer check name when one step bundles
-      # several). A manifest observation source supplies the pass/fail; the
-      # test_case here must match the test_case the workflow emits. test_case
-      # matching is case-insensitive. The manifest contract lives in the
-      # quality skill's observation-sources template.
+      # several). The workflow's canonical quality-observations.json supplies
+      # the pass/fail; test_case here must match the emitted test_case.
+      # Matching is case-insensitive. The output contract lives under
+      # improve/assets/quality-observations.template.json.
       - id: "<check-evidence-id>"
         type: "smoke"
         path: ".github/workflows/<workflow-file>.yml"

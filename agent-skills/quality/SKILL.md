@@ -102,8 +102,9 @@ artifact names:
 2. **Map the project.** Construct project → feature structure and choose the
    highest-priority feature.
 3. **Map each feature.** Define its quality checks and connect existing proof.
-4. **Connect runtime.** Configure observation sources and sets for proof that
-   emits machine-readable results.
+4. **Connect runtime.** Arrange for proof producers to publish canonical
+   `quality-observations.json`, within the producer edit boundary below, then
+   configure transport-only sources and sets that locate those files.
 5. **Assess.** Run `quality-tools` and explain all four scores together.
 6. **Improve.** Diagnose the weak score, improve the underlying structure,
    proof, implementation, or runtime wiring, then assess again.
@@ -111,6 +112,25 @@ artifact names:
 
 `/quality start` orchestrates steps 1–5 for a new or unmapped repository. The
 more specific commands let an experienced user enter at any stage.
+
+## Tool version gate
+
+This skill's canonical-observation contract requires
+`@shiplightai/quality-tools` 0.3.0. Before invoking `quality-tools` or authoring
+observation configuration, verify that interface:
+
+```bash
+npx --yes @shiplightai/quality-tools@^0.3.0 observations --help
+```
+
+Do not fall back to an unversioned package or 0.2.x. If the pinned package is
+unavailable, do not write transport-only observation config; report the package
+publication blocker. When working inside the `quality-tools` source checkout,
+use its repository-local CLI instead:
+
+```bash
+pnpm exec tsx packages/quality-tools/src/cli.ts observations --help
+```
 
 ## Commands
 

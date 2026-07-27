@@ -111,7 +111,7 @@ Keep the map structural: proof definitions, declared priority, and proof gaps
 belong here; run outcomes and derived judgments do not. Preserve stable ids so
 downstream observation and evaluation systems can join on them. Copy
 `assets/quality-map.template.yaml` for new maps and validate with
-`npx --yes @shiplightai/quality-tools validate <map-path>` (the engine's own
+`npx --yes @shiplightai/quality-tools@^0.3.0 validate <map-path>` (the engine's own
 validator; see "Validate" below).
 
 ## Unit Test Evidence
@@ -206,8 +206,8 @@ ratification gates that feed structure confidence; the feature-level gates — f
 ## Runtime Join Contract
 
 The canonical interface between feature quality maps and observations.
-`improve` configures adapters that consume it; evidence authored here
-must honor it:
+`improve` makes proof producers emit the canonical observation format and
+configures sources that locate it; evidence authored here must honor it:
 
 - `evidence.path` is the canonical proof-source identity. Prefer stable
   repo-relative paths aligned with emitted artifact paths.
@@ -216,9 +216,8 @@ must honor it:
 - Evidence without `test_case` is file-level and matches any observed test case
   for the same path; evidence with `test_case` matches only that test case.
 - Do not mix pinned and unpinned rows for the same path.
-- Standard adapters populate the observed side from their native report: JUnit
-  uses testcase file + name, Playwright JSON uses spec file + title, manifest
-  records use `test_file` + `test_case`.
+- Canonical observation records populate the observed side with `path` plus
+  optional `test_case`. The producer converts native reports before upload.
 
 ## Smoke And Health Checks As Evidence
 
@@ -226,10 +225,10 @@ Many release gates are smoke/health checks that run in CI but are not test files
 They are valid runtime evidence. Author the map side: set `path` to the workflow
 file that wires the gate and `test_case` to the unit being proven (the workflow
 step, or a finer check name). Choose a schema-valid evidence `type` and validate.
-When no parseable report exists yet, record the missing runtime backing as a
-`proof_gap` — a legitimate gap, not an error — and hand the workflow-emit step
-and observation source to `improve`. Do not record run outcomes
-in the map.
+When no canonical observation file exists yet, record the missing runtime
+backing as a `proof_gap`—a legitimate gap, not an error—and hand the producer
+emit step and observation source to `improve`. Do not record run outcomes in
+the map.
 
 ## User-facing check writing
 
@@ -266,13 +265,18 @@ check compact and secondary — do not let it carry the feature's coverage story
    Record `proof_gap` where proof is missing or weak.
 5. **Set provenance.** Set `structure_provenance` honestly. Surface unratified,
    highest-priority checks for human ratification.
-6. **Validate.** Run `npx --yes @shiplightai/quality-tools validate <map-path>`
-   (requires `@shiplightai/quality-tools` ≥ 0.2.0). It runs the engine's real
-   validator — unknown-field, required-field, duplicate-id, source-ref, and
-   evidence-path checks — and exits non-zero on any error (warnings pass). This
-   is the source of truth for the contract, not a static schema copy; run
-   `npx --yes @shiplightai/quality-tools schema` to print the current JSON Schema
-   for reference. Keep the map structural — no run outcomes or rollups.
+6. **Validate.** Run
+   `npx --yes @shiplightai/quality-tools@^0.3.0 validate <map-path>`. It runs the
+   engine's real validator—unknown-field, required-field, duplicate-id,
+   source-ref, and evidence-path checks—and exits non-zero on any error
+   (warnings pass). This is the source of truth for the contract, not a static
+   schema copy. Print the current JSON Schema for reference:
+
+   ```bash
+   npx --yes @shiplightai/quality-tools@^0.3.0 schema
+   ```
+
+   Keep the map structural—no run outcomes or rollups.
 7. **Optional runtime hand-off.** When the user wants runtime results connected,
    use `improve` for `.quality/config/*`, then `assess`. This command contributes
    the map side: evidence `path`/`test_case` and proof gaps.
@@ -281,7 +285,7 @@ check compact and secondary — do not let it carry the feature's coverage story
 
 | Artifact | Template | Validate |
 | --- | --- | --- |
-| `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `npx --yes @shiplightai/quality-tools validate <map>` (`… schema` prints the contract) |
+| `.quality/evidence/<target>/quality-map.yaml` | `assets/quality-map.template.yaml` | `npx --yes @shiplightai/quality-tools@^0.3.0 validate <map>` (`… schema` prints the contract) |
 
 Map-side vocabularies and ownership live in
 `_shared/vocabularies.md`. For `test-spec.md` / `test-report.md` see `/shiplight

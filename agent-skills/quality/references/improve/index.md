@@ -29,8 +29,10 @@ The quality graph joins structural declarations to current observations:
         ↓ feature id / quality_map_path
 .quality/evidence/<target>/quality-map.yaml
         ↓ evidence.path + optional evidence.test_case
+proof producer / workflow
+        ↓ quality-observations.json (one canonical format)
 .quality/config/observation-sources.yaml
-        ↓ profile id
+        ↓ transport locates the canonical file
 .quality/config/observation-sets.yaml
         ↓ joined within whole-project or saved-view feature scope
 quality-tools analyze
@@ -94,9 +96,9 @@ Classify each gap before editing:
    names, or local-folder path prevent results from loading.
 5. **Artifact emission:** the workflow emits no machine-readable result or emits
    the wrong file.
-6. **Parser/producer:** report format, statuses, timestamps, or parser choice are
-   invalid.
-7. **Graph join:** results load but `test_file`/`test_case` do not match
+6. **Producer format:** the canonical file has an invalid version, envelope,
+   status, timestamp, revision, or duplicate observation identity.
+7. **Graph join:** results load but `path`/`test_case` do not match
    `evidence.path`/`evidence.test_case`, or the match is ambiguous.
 8. **Real failure:** current proof joins correctly and reports a failing/error
    state.
@@ -142,9 +144,9 @@ resolution have been ruled out.
   `.quality/config/observation-sources.yaml`.
 - For artifact-emission problems, add or repair an authorized workflow emit
   step, or propose it when workflow changes are not authorized.
-- For producer/parser problems, fix the producer or choose the adapter matching
-  its actual format.
-- For join problems, align emitted `test_file`/`test_case` with
+- For producer-format problems, make the producer use `quality-tools
+  observations`; do not add a parser choice to source configuration.
+- For join problems, align emitted `path`/`test_case` with
   `evidence.path`/`evidence.test_case`. There is no second mapping table.
 - For a real failure, fix the implementation or proof through its owning workflow and
   rerun it.
@@ -160,17 +162,24 @@ resolution have been ruled out.
 - Feature map:
 
   ```bash
-  npx --yes @shiplightai/quality-tools validate <quality-map-path>
+  npx --yes @shiplightai/quality-tools@^0.3.0 validate <quality-map-path>
   ```
 
 - Current quality-map schema:
 
   ```bash
-  npx --yes @shiplightai/quality-tools schema
+  npx --yes @shiplightai/quality-tools@^0.3.0 schema
   ```
 
-- Observation config: compare with the schemas in `assets/` and run the
-  relevant assessment. Engine diagnostics are the runtime contract check.
+- Canonical observations:
+
+  ```bash
+  npx --yes @shiplightai/quality-tools@^0.3.0 observations validate \
+    <quality-observations.json>
+  ```
+
+- Observation config: compare with the schemas in `assets/`, then run the
+  relevant assessment. Engine diagnostics verify acquisition and graph joins.
 - Implementation/proof changes: run their owning verification command before
   reassessment.
 
@@ -202,16 +211,21 @@ Use the templates and schemas under `assets/`.
 ### Sources
 
 One profile represents one acquisition integration, such as one GitHub Actions
-workflow or one local result folder. Each adapter only describes how to parse an
-artifact:
+workflow or one local result folder. It answers only:
 
-- `junit`
-- `playwright-json`
-- `manifest`
+- which transport fetches results: `github-actions` or `local-folder`
+- which `observation_path` contains canonical `quality-observations.json`
+  content
 
-Prefer an existing structured artifact. Use a manifest for smoke/health gates
-that have no native report. Do not create a source profile until the artifact
-exists or its emit step is being added in the same authorized change.
+A source never selects a parser. Raw JUnit, Playwright, telemetry, or custom
+gate output must be converted by its producer before the source reads it. Do
+not create a source profile until the canonical file exists or its emit step is
+being added in the same authorized change.
+
+A local-folder profile reads one file. A GitHub Actions profile may select
+several uploaded artifacts from one workflow run; every matching
+`observation_path` must use the same canonical contract, and the source merges
+their observations.
 
 ### Observation sets
 
@@ -239,30 +253,121 @@ the observed revision/run identifies a concrete release candidate.
 - An unpinned row matches any observed case for its path.
 - A pinned row matches only that case.
 - Never mix pinned and unpinned evidence rows for the same path.
-- JUnit supplies testcase file + name; Playwright JSON supplies spec file +
-  title; manifest supplies `test_file` + `test_case`.
+- Every canonical record supplies `path` plus optional `test_case`. `path`
+  matches `evidence.path`; `test_case` matches `evidence.test_case`.
 
 If one observation matches both a file-level and pinned row, remove the overlap:
 keep the proof file-level or pin every distinct row.
 
-## Workflow-emitted observations
+## Connect an observation source
 
-For a CI smoke or health gate:
+Follow this sequence. Do not ask the user to choose a parser or config shape.
 
-1. Map the workflow file as `evidence.path`.
-2. Use the step/check name as `evidence.test_case`.
-3. Emit a manifest record with the same `test_file` and `test_case`.
-4. Configure a manifest adapter for the artifact.
+1. **Choose the producer.** Identify the workflow, local command, telemetry
+   query, or manual gate that determines the result.
+2. **Choose stable join keys.** Read the mapped `evidence.path` and optional
+   `evidence.test_case`. The producer must emit those exact identities.
+3. **Arrange canonical emission at the producer boundary.**
 
-Without a machine-readable artifact, record a proof gap rather than pretending
-the workflow is observed.
+   If editing the producer is explicitly authorized, add only the mechanical
+   serialization and upload glue needed to publish the already-determined
+   result. Otherwise, do not edit the producer: provide the exact command and
+   upload change as a proposal, record the emission gap, and do not configure a
+   source that pretends the canonical file already exists.
+
+   Use the applicable producer command:
+
+   - JUnit:
+
+     ```bash
+     npx --yes @shiplightai/quality-tools@^0.3.0 observations from-junit \
+       <report.xml> --output quality-observations.json
+     ```
+
+   - Playwright JSON:
+
+     ```bash
+     npx --yes @shiplightai/quality-tools@^0.3.0 observations from-playwright \
+       <report.json> --output quality-observations.json
+     ```
+
+   - Smoke, health, telemetry, static, or manual gate:
+
+     ```bash
+     npx --yes @shiplightai/quality-tools@^0.3.0 observations record \
+       --path <evidence.path> \
+       --test-case <optional-evidence.test_case> \
+       --status <pass|fail|error|skipped> \
+       --output <shard.json>
+     ```
+
+     Omit `--test-case` when the evidence row is file-level rather than pinned
+     to a named case.
+
+   - When several commands produce shards:
+
+     ```bash
+     npx --yes @shiplightai/quality-tools@^0.3.0 observations merge \
+       <shard...> --output quality-observations.json
+     ```
+
+   GitHub Actions metadata comes from `GITHUB_SHA`, `GITHUB_REF_NAME`, and
+   `GITHUB_RUN_ID`. Outside GitHub Actions, supply `--commit`; `--branch`,
+   `--run-id`, `--run-url`, and `--observed-at` are optional.
+4. **Validate before upload.**
+
+   ```bash
+   npx --yes @shiplightai/quality-tools@^0.3.0 observations validate \
+     quality-observations.json
+   ```
+
+5. **Publish canonical files.** Upload one `quality-observations.json` per
+   selected artifact. A workflow may publish several selected artifacts, but
+   every one uses the same contract. Raw native reports may remain alongside
+   the canonical file for diagnosis; the quality engine never parses them.
+6. **Configure the transport.** Copy
+   `assets/observation-sources.template.yaml`. Set `transport`,
+   `observation_path`, and either `github` or `local_folder`. Source
+   configuration contains no parser list or format selection.
+7. **Add the profile to an observation set.**
+8. **Run `assess`.** Verify source acquisition first, then verify every
+   observation resolves to the intended evidence identity.
+
+The canonical file is strict JSON:
+
+```json
+{
+  "schema_version": 1,
+  "revision": { "commit": "abc123", "branch": "main" },
+  "run": { "id": "123", "url": "https://example.test/runs/123" },
+  "observed_at": "2026-07-26T18:00:00Z",
+  "observations": [
+    {
+      "path": ".github/workflows/publish.yml",
+      "test_case": "tarball-size",
+      "status": "pass"
+    }
+  ]
+}
+```
+
+`schema_version`, `revision.commit`, `observed_at`, and `observations` are
+required. Status is exactly `pass`, `fail`, `error`, or `skipped`. Per-record
+`observed_at` and `note` are optional. Duplicate normalized
+`path + test_case` identities invalidate the whole file. Absence means
+unobserved; never manufacture a missing record.
+
+For a CI smoke or health gate, map the workflow file as `evidence.path`, use the
+step/check name as `evidence.test_case`, and emit those values through
+`observations record`. Without the canonical file, record a proof gap rather
+than pretending the workflow is observed.
 
 ## Generate fix prompts
 
 For agent-ready proof-gap prompts:
 
 ```bash
-npx @shiplightai/quality-tools fix-prompts \
+npx --yes @shiplightai/quality-tools@^0.3.0 fix-prompts \
   --project-path <repo-root> \
   --output .quality/fix-prompts.md
 ```

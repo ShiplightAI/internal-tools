@@ -39,39 +39,6 @@
         }
       }
     },
-    "junitAdapter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "type", "artifact_path"],
-      "properties": {
-        "id": { "$ref": "#/definitions/nonEmptyString" },
-        "name": { "$ref": "#/definitions/nonEmptyString" },
-        "type": { "const": "junit" },
-        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
-      }
-    },
-    "playwrightJsonAdapter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "type", "artifact_path"],
-      "properties": {
-        "id": { "$ref": "#/definitions/nonEmptyString" },
-        "name": { "$ref": "#/definitions/nonEmptyString" },
-        "type": { "const": "playwright-json" },
-        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
-      }
-    },
-    "manifestAdapter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "type"],
-      "properties": {
-        "id": { "$ref": "#/definitions/nonEmptyString" },
-        "name": { "$ref": "#/definitions/nonEmptyString" },
-        "type": { "const": "manifest" },
-        "artifact_path": { "$ref": "#/definitions/nonEmptyString" }
-      }
-    },
     "github": {
       "type": "object",
       "additionalProperties": false,
@@ -98,38 +65,28 @@
     "profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "source_kind", "adapters"],
+      "required": ["id", "name", "transport", "observation_path"],
       "properties": {
         "id": { "$ref": "#/definitions/nonEmptyString" },
         "name": { "$ref": "#/definitions/nonEmptyString" },
         "description": { "$ref": "#/definitions/nonEmptyString" },
-        "source_kind": {
+        "transport": {
           "enum": ["github-actions", "local-folder"]
         },
+        "observation_path": { "$ref": "#/definitions/nonEmptyString" },
         "source_refs": {
           "type": "array",
           "items": { "$ref": "#/definitions/sourceRef" }
         },
         "auth": { "$ref": "#/definitions/auth" },
         "github": { "$ref": "#/definitions/github" },
-        "local_folder": { "$ref": "#/definitions/localFolder" },
-        "adapters": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "oneOf": [
-              { "$ref": "#/definitions/junitAdapter" },
-              { "$ref": "#/definitions/playwrightJsonAdapter" },
-              { "$ref": "#/definitions/manifestAdapter" }
-            ]
-          }
-        }
+        "local_folder": { "$ref": "#/definitions/localFolder" }
       },
       "allOf": [
         {
           "if": {
             "properties": {
-              "source_kind": { "const": "github-actions" }
+              "transport": { "const": "github-actions" }
             }
           },
           "then": {
@@ -139,7 +96,7 @@
         {
           "if": {
             "properties": {
-              "source_kind": { "const": "local-folder" }
+              "transport": { "const": "local-folder" }
             }
           },
           "then": {

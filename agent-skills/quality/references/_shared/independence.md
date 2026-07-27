@@ -16,8 +16,12 @@ producers—never one of their commands.
 
 1. **One-directional artifact flow.** Producers emit facts (`test-spec.md`,
    `test-report.md`, test code, run results); Quality reads/indexes/scores them.
-   Quality **never authors a test** or edits a producer artifact. Producers never
-   write quality-graph source or touch `.quality/`.
+   Quality **never authors a test or changes the logic that determines a
+   result**. When explicitly authorized, it may add mechanical workflow glue
+   that serializes and uploads an already-determined result as canonical
+   `quality-observations.json`; that glue must not manufacture, reinterpret, or
+   force a passing status. Producers never write quality-graph source or touch
+   `.quality/`.
 2. **The engine scores, never the LLM.** The four scores are computed by the
    deterministic `quality-tools` engine from declared facts + runtime observations
    + human ratification — never an agent's opinion. Never blend, optimize, or

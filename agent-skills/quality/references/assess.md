@@ -30,7 +30,7 @@ Report the exact missing graph edge and recommend `start` or `improve`.
 From the target repository:
 
 ```bash
-npx @shiplightai/quality-tools analyze \
+npx --yes @shiplightai/quality-tools@^0.3.0 analyze \
   --project-path <repo-root> \
   --observation-set <observation-set-id> \
   --view <optional-view-id>
@@ -48,7 +48,8 @@ Separate acquisition from graph resolution:
 - `runtime_review.execution_status` and `profiles[]`: whether result sources
   were acquired and parsed
 - `runtime_review.resolution_status`: whether observations joined to mapped proof
-- `execution_diagnostics`: source, credential, artifact, or parser problems
+- `execution_diagnostics`: source, credential, artifact, or canonical-format
+  problems
 - `resolution_diagnostics` and `resolution_audit`: unmatched or ambiguous graph
   edges
 - `recommendations[]`: concrete failing, missing, weak, stale, or unobserved

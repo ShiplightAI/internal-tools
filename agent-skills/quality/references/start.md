@@ -89,10 +89,13 @@ start. Do not autonomously map an entire brownfield repository.
 
 7. **Connect runtime when results exist**
    - Follow `improve` → "Observation configuration".
-   - Add the smallest observation source and set that match an existing
-     machine-readable result.
-   - Do not create an observation profile for a workflow that emits no usable
-     artifact. Record the emission gap instead.
+   - When producer edits are explicitly authorized, make the producer publish
+     canonical `quality-observations.json`, following `improve` → "Connect an
+     observation source". Otherwise, propose the exact emit/upload change and
+     record the emission gap without editing the producer.
+   - Add the smallest transport-only observation source and set that locate it.
+   - Do not create a source profile for a workflow that emits no canonical
+     observation file. Record the emission gap instead.
    - Add a view only when a reusable feature subset must be assessed
      independently. For example, Monots uses `[engine, CLI]` and `[engine, MCP]`
      as overlapping scopes.

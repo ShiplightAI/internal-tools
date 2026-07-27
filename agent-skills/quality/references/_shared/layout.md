@@ -26,8 +26,11 @@ Rules:
   authoring checks or structure (see the `improve` edit boundaries).
 - `fix-prompts.md` and `generated/*` are written by `quality-tools` only — treat
   them as read-only.
-- Quality reads, but never writes, the **producer** artifacts it indexes:
+- Quality reads, but does not author, the **producer proof** it indexes:
   `specs/<feature>/test-spec.md`, `specs/<feature>/test-report.md`, `TESTING.md`,
-  and the test files themselves (see `_shared/independence.md`).
+  and the test files themselves. The narrow exception is explicitly authorized
+  workflow glue that serializes an already-determined result into canonical
+  observations; it must not change how the result is determined (see
+  `_shared/independence.md`).
 - `<target-slug>` reuses the `specs/NNN-kebab-case` numeric prefix so artifacts
   join across the producer and Quality sides.

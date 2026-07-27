@@ -1,8 +1,9 @@
 profiles:
   - id: "example-workflow"
     name: "Example workflow"
-    description: "Fetch runtime artifacts that runtime analysis can join onto existing quality-map evidence paths."
-    source_kind: "github-actions"
+    description: "Fetch the canonical observations published by one workflow."
+    transport: "github-actions"
+    observation_path: "quality-observations.json"
 
     source_refs:
       - path: ".github/workflows/publish.yml"
@@ -12,64 +13,33 @@ profiles:
 
     auth:
       required_env:
-        - "GITHUB_TOKEN" # Only for github-actions sources
+        - "GITHUB_TOKEN"
 
     github:
       repo: "org/repo"
       workflow: "publish.yml"
       artifact_names:
         - "quality-observations-*"
-      # branch: "main" # Optional narrow filter
+      # branch: "main"
 
+    # For a local source:
+    # - set transport to local-folder
+    # - remove both `auth` and `github`
+    # - add:
+    # transport: "local-folder"
     # local_folder:
     #   path: "artifacts/quality"
 
-    adapters:
-      - id: "browser-junit"
-        name: "Browser JUnit"
-        type: "junit"
-        artifact_path: "cli/browser-e2e.junit.xml"
-
-      - id: "shared-sdk-junit"
-        name: "Shared SDK JUnit"
-        type: "junit"
-        artifact_path: "engine-fixture.junit.xml"
-
-      # Manifest adapter: for smoke/health checks and other gates that are not test
-      # files. A workflow step writes a small JSON report of per-check status; each
-      # record joins to a quality-map evidence entry by (test_file, test_case).
-      # artifact_path is OPTIONAL — omit only when the artifact is dedicated to
-      # observations (JSON-only); set it when the source also holds other JSON.
-      # (See the authoring notes at the bottom for why.)
-      - id: "release-smoke-manifest"
-        name: "Release smoke checks"
-        type: "manifest"
-        # artifact_path: "observations/smoke-checks.json"  # optional; add if clear from the workflow
-
-# Manifest contract (what the workflow writes as the JSON report):
-#   [
-#     { "test_file": ".github/workflows/release.yml",
-#       "test_case": "agent_payload", "status": "pass" }
-#   ]
-#   - test_file: matches quality-map evidence.path (the workflow file for checks).
-#   - test_case: matches evidence.test_case; omit for file-level proof. The same
-#     path/test_case pinning semantics apply to every adapter.
-#   - status: pass | fail | error | skipped (case-insensitive; passed/ok/failed accepted).
-#   - Optional per-record: observed_at (ISO), note.
-#   - The top-level may also be { "observations": [ ... ] }.
-#
-# Authoring notes:
-# - One profile per source integration; profiles only declare where results come from.
-# - artifact_path is optional for manifests, but choose deliberately:
-#     * omit it only when the artifact is DEDICATED to observations (JSON-only,
-#       e.g. a quality-observations-* bundle) — every JSON file is then read as a manifest;
-#     * set it when the source also holds other JSON (Playwright reports, release
-#       records, etc.). The reader tries every .json; non-manifest JSON never
-#       becomes a false observation, but it yields diagnostics and a "partial"
-#       status. Pointing artifact_path at the one report avoids that noise.
-# - Prefer existing structured artifacts (JUnit/Playwright) when the workflow
-#   already produces them; use a manifest for checks that have no such report.
-# - quality-map evidence.path is the canonical proof-source path (the workflow
-#   file for checks); pinned checks disambiguate by test_case.
-# - Derive github.repo from the repo's git remote rather than hardcoding it.
-# - Keep artifact selection tight; do not fetch unrelated workflow noise.
+# Authoring rules:
+# - One profile represents one workflow or local folder.
+# - observation_path is relative to the downloaded artifact or local_folder.
+# - GitHub artifact_names may select several uploaded archives from one run.
+#   Every matching observation_path uses the same canonical contract; Quality
+#   merges their observations.
+# - A local-folder profile reads exactly one observation_path.
+# - Raw JUnit, Playwright, telemetry, or custom reports are producer inputs.
+#   Convert them in the workflow with `quality-tools observations`; source
+#   configuration contains no parser or format selection.
+# - Derive github.repo from the repository's git remote.
+# - Add a profile only when the canonical file exists or its emit/upload step is
+#   part of the same authorized change.
