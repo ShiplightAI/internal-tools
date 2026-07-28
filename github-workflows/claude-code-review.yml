@@ -4,7 +4,7 @@ name: Claude Code Review
 # The trigger + permissions must live here (GitHub requires `on:` in the repo's
 # own workflow, and claude-code-action's tamper guard wants this file on the
 # repo's default branch). Everything else — prompt, approval logic, pinned refs —
-# lives in the ShiplightAI/internal-agent-skills/claude-review composite action.
+# lives in the ShiplightAI/internal-tools/claude-review composite action.
 on:
   pull_request:
     types: [opened, synchronize]
@@ -18,7 +18,7 @@ jobs:
       issues: read
       id-token: write # required: claude-code-action mints its App token via OIDC
     steps:
-      - uses: ShiplightAI/internal-agent-skills/claude-review@v1
+      - uses: ShiplightAI/internal-tools/claude-review@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Optional per-repo emphasis, e.g.:
