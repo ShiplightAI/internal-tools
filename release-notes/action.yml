@@ -1,0 +1,166 @@
+name: "Shiplight Agent Release Notes"
+description: >
+  Writes user-facing release notes for a commit range using a headless agent
+  (claude --print, falling back through Codex), and returns them as a file for
+  `gh release create --notes-file`. Deliberately never fails: a caller that gets
+  no notes is expected to fall back to `--generate-notes` rather than block a
+  release on a model outage. Consumer repos keep only a short step plus their
+  own `notes-focus`.
+
+inputs:
+  claude_code_oauth_token:
+    description: "OAuth token for the Claude GitHub App / CLI."
+    default: ""
+  anthropic_api_key:
+    description: "Alternative to claude_code_oauth_token."
+    default: ""
+  openai_api_key:
+    description: "Enables the Codex leg of the fallback chain. Optional."
+    default: ""
+  from-ref:
+    description: >
+      Range start, exclusive — normally the previous release tag. When empty the
+      action uses the repository's first commit, which is the first-release case.
+    default: ""
+  to-ref:
+    description: "Range end, inclusive. Normally the tag being released."
+    required: true
+  notes-focus:
+    description: >
+      Optional repo-specific guidance appended to the prompt (what this project
+      is, which changes matter to its users, what to leave out). Trusted config
+      set by the repo's own workflow — not PR-author input.
+    default: ""
+  output-file:
+    description: "Where to write the notes."
+    default: "/tmp/release-notes.md"
+  claude-models:
+    description: "Space-separated Claude fallback chain, best first."
+    default: ""
+  codex-models:
+    description: "Space-separated Codex fallback chain, best first."
+    default: ""
+
+outputs:
+  notes-file:
+    description: "Path to the generated notes. Empty string when nothing was produced."
+    value: ${{ steps.generate.outputs.notes-file }}
+  generated:
+    description: "'true' when usable notes were produced, 'false' otherwise."
+    value: ${{ steps.generate.outputs.generated }}
+
+runs:
+  using: composite
+  steps:
+    # Deliberately no actions/checkout here, unlike the claude-review action.
+    # This runs late in a release job, after the artifact has been built and
+    # packaged; a fresh checkout would wipe those untracked build outputs. The
+    # caller's checkout is reused and only deepened below.
+    - name: Ensure enough history for the range
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Release jobs check out at depth 1, so `git log from..to` would fail.
+        if [ -f .git/shallow ]; then
+          git fetch --unshallow --tags --quiet origin
+        else
+          git fetch --tags --quiet origin
+        fi
+
+    - name: Install the Claude CLI
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
+    - name: Install the Codex CLI
+      if: inputs.openai_api_key != ''
+      shell: bash
+      run: npm install -g @openai/codex
+
+    - name: Build the prompt
+      shell: bash
+      env:
+        FROM_REF: ${{ inputs.from-ref }}
+        TO_REF: ${{ inputs.to-ref }}
+        NOTES_FOCUS: ${{ inputs.notes-focus }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        FROM="$FROM_REF"
+        if [ -z "$FROM" ]; then
+          FROM=$(git rev-list --max-parents=0 HEAD | tail -1)
+          echo "No from-ref given; using the first commit ($FROM) — first-release case."
+        fi
+        RANGE="$FROM..$TO_REF"
+        echo "Range: $RANGE"
+
+        {
+          echo "Write the release notes for ${REPO} ${TO_REF}."
+          echo
+          echo "Everything you need is inline below. Do not use any tools, do not read"
+          echo "files, and do not run commands — just write the notes."
+          echo
+          echo "Output ONLY the notes, as Markdown, with no preamble, no surrounding"
+          echo "code fence, and no title line naming the version (the release page"
+          echo "already shows it)."
+          echo
+          echo "Write for someone who USES this software and is deciding whether they"
+          echo "care about this release:"
+          echo "- Lead with what changed for them. Group related work under short"
+          echo "  headings; drop headings entirely if there are only a few entries."
+          echo "- Say what a change does, not which files moved. Prefer one clear"
+          echo "  sentence over a bullet echoing a commit subject."
+          echo "- Fold purely internal work (refactors, test scaffolding, CI) into a"
+          echo "  brief closing note, or omit it. Do not pad."
+          echo "- State fixes as the behaviour that is now correct, not as the commit"
+          echo "  that changed it."
+          echo "- Never invent a change, a number, or an attribution. If a commit's"
+          echo "  user-facing effect is genuinely unclear, describe it factually and"
+          echo "  briefly rather than guessing at intent."
+          echo "- Call out anything a user must ACT on — a breaking change, a new"
+          echo "  permission, a migration — near the top, even if it is small."
+          if [ -n "$NOTES_FOCUS" ]; then
+            echo
+            echo "Project context:"
+            printf '%s\n' "$NOTES_FOCUS"
+          fi
+          echo
+          echo "## Commits in $RANGE"
+          echo
+          # Untrusted-ish content: commit messages are author-controlled. The
+          # agent is given no tools, so the worst case is bad prose, not action.
+          git log --no-merges --pretty=format:'--- %h %an%n%s%n%b' "$RANGE"
+          echo
+          echo
+          echo "## Diffstat"
+          echo
+          git diff --stat "$RANGE" | tail -40
+        } > /tmp/release-notes-prompt.txt
+
+        echo "Prompt bytes: $(wc -c < /tmp/release-notes-prompt.txt)"
+
+    - name: Generate
+      id: generate
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        PROMPT_FILE: /tmp/release-notes-prompt.txt
+        NOTES_FILE: ${{ inputs.output-file }}
+        CLAUDE_MODELS: ${{ inputs.claude-models }}
+        CODEX_MODELS: ${{ inputs.codex-models }}
+      run: |
+        set -uo pipefail
+        # Empty overrides must not shadow the script's own defaults.
+        [ -z "${CLAUDE_MODELS:-}" ] && unset CLAUDE_MODELS
+        [ -z "${CODEX_MODELS:-}" ] && unset CODEX_MODELS
+        bash "${{ github.action_path }}/run-release-notes.sh"
+        if [ -s "${{ inputs.output-file }}" ]; then
+          echo "notes-file=${{ inputs.output-file }}" >> "$GITHUB_OUTPUT"
+          echo "generated=true" >> "$GITHUB_OUTPUT"
+          echo "--- generated notes ---"
+          cat "${{ inputs.output-file }}"
+        else
+          echo "notes-file=" >> "$GITHUB_OUTPUT"
+          echo "generated=false" >> "$GITHUB_OUTPUT"
+        fi
