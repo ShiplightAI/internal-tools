@@ -1,0 +1,61 @@
+name: Claude Code Review
+
+# Thin caller: the prompt, severity/approval logic, checkout, and pinned action
+# refs all live in the ./claude-review composite action. This file only owns the
+# trigger, permissions, and repo-specific review focus (GitHub requires the
+# trigger + permissions in the caller, and claude-code-action's tamper guard
+# requires the token wired here).
+#
+# Load the composite action from the base commit. PR changes to that action
+# must never execute in the job receiving the review credential.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  claude-review:
+    # Forks and Dependabot do not receive the OAuth secret. Their tests still run.
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write # submit the review (approve / request-changes / comment)
+      issues: read
+      id-token: write # required: claude-code-action mints its App token via OIDC
+    steps:
+      # Needed before `uses: ./claude-review` — a local action must be on disk.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./claude-review
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          review-focus: |
+            This repo ships high-trust automation that runs inside *other* repos'
+            privileged jobs and developer machines. Weight these invariants:
+            - GitHub Actions security in `claude-review/action.yml`: third-party
+              actions must stay pinned to a full commit SHA (never a tag or
+              branch); never interpolate PR-author-controlled data (title, body,
+              branch name, commit message) into a `run:` block; keep the
+              `--allowed-tools` allowlist minimal and never grant write-capable
+              `gh` subcommands beyond `gh pr review`.
+            - The workflow/action split: the trigger, `permissions:`, and the
+              OAuth token stay in the caller workflow; prompt, approval logic,
+              and pinned refs stay in the composite action. Moving `on:` or
+              `permissions:` into the action breaks every consumer, and moving
+              prompt logic back into callers defeats the point of the split.
+            - Least privilege: flag any new `permissions:` scope, especially
+              `contents: write` or a broadened `id-token`.
+            - `agent-skills/**` and `.agents/**` are instructions an agent
+              executes verbatim in someone else's repo. Review them like code:
+              flag guidance that would have an agent force-push, reset, delete
+              branches, merge with `--admin`, bypass review, or run `sed`/`tee`
+              against production config.
+            - `scripts/**` run on developer machines — flag unquoted expansions,
+              `eval` on untrusted input, and unexpected writes outside the repo.
+            - Docs must match reality: `README.md` and `github-workflows/README.md`
+              describe the install path for consumers, so a stale org/repo path or
+              action ref in those files is a real defect, not a nit.

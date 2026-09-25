@@ -1,0 +1,22 @@
+name: Action contracts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Action contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      # No credentials and no model calls: the checks drive a fake CLI on PATH.
+      - run: scripts/check-release-notes.sh
+      - run: python3 scripts/check-action-output.py
